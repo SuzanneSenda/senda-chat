@@ -493,6 +493,34 @@ export default function AdminPage() {
     setTimeout(() => setMessage(null), 3000)
   }
 
+  const deleteUser = async (userId: string, userName: string) => {
+    const confirmed = confirm(`¿Estás seguro de eliminar a "${userName}"?\n\nEsta acción no se puede deshacer.`)
+    if (!confirmed) return
+
+    setActionLoading(userId)
+    
+    try {
+      const response = await fetch('/api/admin/users', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId })
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to delete')
+      }
+
+      setUsers(users.filter(u => u.id !== userId))
+      setMessage({ type: 'success', text: 'Usuario eliminado' })
+    } catch (error: any) {
+      setMessage({ type: 'error', text: error.message || 'Error al eliminar usuario' })
+    }
+    
+    setActionLoading(null)
+    setTimeout(() => setMessage(null), 3000)
+  }
+
   // Loading state
   if (loading || !authChecked) {
     return (
@@ -729,10 +757,18 @@ export default function AdminPage() {
                           <button
                             onClick={() => updateUserStatus(u.id, 'inactive')}
                             disabled={actionLoading === u.id}
-                            className="px-2 py-1 text-xs bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50"
+                            className="px-2 py-1 text-xs bg-yellow-50 text-yellow-700 border border-yellow-200 rounded-lg hover:bg-yellow-100 transition-colors disabled:opacity-50"
                             title="Desactivar usuario"
                           >
-                            Desactivar
+                            ⏸️
+                          </button>
+                          <button
+                            onClick={() => deleteUser(u.id, u.full_name || u.email)}
+                            disabled={actionLoading === u.id}
+                            className="px-2 py-1 text-xs bg-red-50 text-red-600 border border-red-200 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50"
+                            title="Eliminar usuario"
+                          >
+                            🗑️
                           </button>
                         </div>
                       ) : (
@@ -762,18 +798,29 @@ export default function AdminPage() {
           </h2>
           <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 space-y-2">
             {inactiveUsers.map(u => (
-              <div key={u.id} className="flex items-center justify-between py-2">
+              <div key={u.id} className="flex items-center justify-between py-2 px-3 bg-white rounded-lg">
                 <div>
                   <p className="text-gray-600">{u.full_name || u.email}</p>
                   <p className="text-xs text-gray-400">{u.email}</p>
                 </div>
-                <button
-                  onClick={() => updateUserStatus(u.id, 'active')}
-                  disabled={actionLoading === u.id}
-                  className="text-sm text-[var(--sage)] hover:underline disabled:opacity-50"
-                >
-                  Reactivar
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => updateUserStatus(u.id, 'active')}
+                    disabled={actionLoading === u.id}
+                    className="px-3 py-1.5 text-xs bg-green-50 text-green-700 border border-green-200 rounded-lg hover:bg-green-100 transition-colors disabled:opacity-50"
+                    title="Activar usuario"
+                  >
+                    ▶️ Activar
+                  </button>
+                  <button
+                    onClick={() => deleteUser(u.id, u.full_name || u.email)}
+                    disabled={actionLoading === u.id}
+                    className="px-2 py-1.5 text-xs bg-red-50 text-red-600 border border-red-200 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50"
+                    title="Eliminar usuario"
+                  >
+                    🗑️
+                  </button>
+                </div>
               </div>
             ))}
           </div>
