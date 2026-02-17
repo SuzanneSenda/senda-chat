@@ -4,45 +4,32 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth/context';
 
 export function DutyToggle() {
-  const { user, loading: authLoading } = useAuth();
+  const { user } = useAuth();
   const [isOnDuty, setIsOnDuty] = useState(false);
-  const [dutyLoading, setDutyLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
 
-  // Fetch current duty status when user is available
+  // Fetch current duty status
   useEffect(() => {
-    let cancelled = false;
-
     async function fetchDutyStatus() {
-      // Wait for auth to finish loading first
-      if (authLoading) return;
-      
-      // No user = not logged in
-      if (!user?.id) {
-        setDutyLoading(false);
-        return;
-      }
+      if (!user?.id) return;
       
       try {
         const res = await fetch('/api/duty/status');
-        if (cancelled) return;
         const data = await res.json();
-        if (cancelled) return;
         setIsOnDuty(data.isOnDuty || false);
       } catch (error) {
         console.error('Error fetching duty status:', error);
       } finally {
-        if (!cancelled) setDutyLoading(false);
+        setLoading(false);
       }
     }
 
     fetchDutyStatus();
-    
-    return () => { cancelled = true; };
-  }, [user?.id, authLoading]);
+  }, [user?.id]);
 
   const toggleDuty = async () => {
-    if (updating || !user?.id) return;
+    if (updating) return;
     
     setUpdating(true);
     const newStatus = !isOnDuty;
@@ -66,31 +53,7 @@ export function DutyToggle() {
     }
   };
 
-  // Show loading while auth is loading
-  if (authLoading) {
-    return (
-      <div className="px-4 py-3 border-t border-gray-200">
-        <div className="animate-pulse h-10 bg-gray-200 rounded-lg"></div>
-      </div>
-    );
-  }
-
-  // If auth finished but no user, they need to log in
-  if (!user?.id) {
-    return (
-      <div className="px-4 py-3 border-t border-gray-200">
-        <button
-          disabled
-          className="w-full py-2.5 px-4 rounded-lg font-medium bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed"
-        >
-          <span>Inicia sesión primero</span>
-        </button>
-      </div>
-    );
-  }
-
-  // Show loading while fetching duty status
-  if (dutyLoading) {
+  if (loading) {
     return (
       <div className="px-4 py-3 border-t border-gray-200">
         <div className="animate-pulse h-10 bg-gray-200 rounded-lg"></div>
