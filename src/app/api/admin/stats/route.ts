@@ -132,6 +132,37 @@ export async function GET(request: NextRequest) {
       conversations: phones.size
     }));
 
+    // Get conversations by hour of day
+    let allInboundMsgs = supabase
+      .from('whatsapp_messages')
+      .select('created_at, phone_number')
+      .eq('direction', 'inbound');
+    
+    if (dateFilter) {
+      allInboundMsgs = allInboundMsgs.gte('created_at', dateFilter);
+    }
+    
+    const { data: hourlyMsgs } = await allInboundMsgs as { data: { created_at: string; phone_number: string }[] | null };
+    
+    // Count unique conversations per hour
+    const hourlyConvs: { [hour: number]: Set<string> } = {};
+    for (let h = 0; h < 24; h++) {
+      hourlyConvs[h] = new Set();
+    }
+    
+    if (hourlyMsgs) {
+      for (const msg of hourlyMsgs) {
+        const hour = new Date(msg.created_at).getHours();
+        hourlyConvs[hour].add(msg.phone_number);
+      }
+    }
+    
+    const hourlyStats = Object.entries(hourlyConvs).map(([hour, phones]) => ({
+      hour: parseInt(hour),
+      label: `${hour}:00`,
+      conversations: phones.size
+    }));
+
     // Get oldest message date for "desde" display
     let oldestQuery = supabase
       .from('whatsapp_messages')
@@ -257,6 +288,7 @@ export async function GET(request: NextRequest) {
       averageScore,
       scoreDistribution,
       dailyStats,
+      hourlyStats,
       dataStartDate,
       volunteerStats,
       volunteerRatingStats,

@@ -671,7 +671,7 @@ function StatsDashboard() {
 
       {/* Daily Conversations Chart */}
       {stats.dailyStats && stats.dailyStats.length > 0 && (
-        <div className="bg-white p-5 rounded-xl border border-gray-200">
+        <div className="bg-white p-5 rounded-xl border border-gray-200 mb-6">
           <p className="text-sm font-semibold text-gray-800 mb-4">💬 Conversaciones por día (últimos 7 días)</p>
           <div className="flex items-end gap-3 h-40">
             {stats.dailyStats.map((day: { date: string; label: string; conversations: number }) => {
@@ -688,6 +688,42 @@ function StatsDashboard() {
                 </div>
               )
             })}
+          </div>
+        </div>
+      )}
+
+      {/* Hourly Conversations Chart */}
+      {stats.hourlyStats && stats.hourlyStats.some((h: any) => h.conversations > 0) && (
+        <div className="bg-white p-5 rounded-xl border border-gray-200">
+          <p className="text-sm font-semibold text-gray-800 mb-4">🕐 Conversaciones por horario</p>
+          <div className="flex items-end gap-1 h-32">
+            {stats.hourlyStats.map((hour: { hour: number; label: string; conversations: number }) => {
+              const maxConvs = Math.max(...stats.hourlyStats.map((h: any) => h.conversations), 1)
+              const height = (hour.conversations / maxConvs) * 100
+              const isActive = hour.conversations > 0
+              return (
+                <div key={hour.hour} className="flex-1 flex flex-col items-center group">
+                  <div 
+                    className={`w-full rounded-t transition-all ${
+                      isActive 
+                        ? 'bg-gradient-to-t from-purple-400 to-purple-500' 
+                        : 'bg-gray-100'
+                    }`}
+                    style={{ height: `${Math.max(height, 3)}%`, minHeight: '4px' }}
+                    title={`${hour.label} - ${hour.conversations} conversaciones`}
+                  />
+                  {hour.hour % 3 === 0 && (
+                    <span className="text-[10px] text-gray-400 mt-1">{hour.hour}h</span>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+          <div className="flex justify-between mt-2 text-[10px] text-gray-400">
+            <span>🌙 Madrugada</span>
+            <span>🌅 Mañana</span>
+            <span>☀️ Tarde</span>
+            <span>🌆 Noche</span>
           </div>
         </div>
       )}
