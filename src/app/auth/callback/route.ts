@@ -39,18 +39,19 @@ export async function GET(request: Request) {
         if (!existingProfile) {
           console.log('[callback] Creating new profile for user:', user.id)
           
-          const { error: profileError } = await adminClient
+          const profileData = {
+            id: user.id,
+            email: user.email || '',
+            full_name: user.user_metadata?.full_name || user.user_metadata?.name || null,
+            status: 'pending',
+            role: 'voluntario',
+            avatar_url: null,
+            phone: null,
+            last_sign_in: null
+          }
+          const { error: profileError } = await (adminClient as any)
             .from('profiles')
-            .insert({
-              id: user.id,
-              email: user.email || '',
-              full_name: user.user_metadata?.full_name || user.user_metadata?.name || null,
-              status: 'pending',
-              role: 'voluntario',
-              avatar_url: null,
-              phone: null,
-              last_sign_in: null
-            } as any)
+            .insert(profileData)
           
           if (profileError) {
             console.error('[callback] Error creating profile:', profileError)
