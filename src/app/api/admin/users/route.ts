@@ -21,7 +21,7 @@ export async function GET() {
       .from('profiles')
       .select('role')
       .eq('id', user.id)
-      .single()
+      .single() as { data: { role: string } | null }
 
     if (!profile || (profile.role !== 'supervisor' && profile.role !== 'admin')) {
       return NextResponse.json({ error: 'Not authorized' }, { status: 403 })
@@ -65,7 +65,7 @@ export async function PATCH(request: NextRequest) {
       .from('profiles')
       .select('role')
       .eq('id', user.id)
-      .single()
+      .single() as { data: { role: string } | null }
 
     if (!profile || (profile.role !== 'supervisor' && profile.role !== 'admin')) {
       return NextResponse.json({ error: 'Not authorized' }, { status: 403 })
@@ -78,7 +78,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Build update object with only provided fields
-    const updateData: Record<string, any> = {}
+    const updateData: Record<string, unknown> = {}
     if (phone !== undefined) updateData.phone = phone
     if (status !== undefined) updateData.status = status
     if (role !== undefined) {
@@ -93,9 +93,9 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'No fields to update' }, { status: 400 })
     }
 
-    // Update user
-    const { error: updateError } = await supabase
-      .from('profiles')
+    // Update user - using type assertion for dynamic updates
+    const { error: updateError } = await (supabase
+      .from('profiles') as ReturnType<typeof supabase.from>)
       .update(updateData)
       .eq('id', userId)
 
@@ -132,7 +132,7 @@ export async function DELETE(request: NextRequest) {
       .from('profiles')
       .select('role')
       .eq('id', user.id)
-      .single()
+      .single() as { data: { role: string } | null }
 
     if (!profile || profile.role !== 'supervisor') {
       return NextResponse.json({ error: 'Solo supervisores pueden eliminar usuarios' }, { status: 403 })

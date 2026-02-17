@@ -5,6 +5,10 @@ export async function GET() {
   try {
     const supabase = await createClient();
     
+    if (!supabase) {
+      return NextResponse.json({ error: 'Supabase not configured' }, { status: 500 });
+    }
+    
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     
     if (userError || !user) {
@@ -15,7 +19,7 @@ export async function GET() {
       .from('profiles')
       .select('is_on_duty')
       .eq('id', user.id)
-      .single();
+      .single() as { data: { is_on_duty: boolean } | null; error: Error | null };
 
     if (profileError) {
       console.error('Error fetching profile:', profileError);

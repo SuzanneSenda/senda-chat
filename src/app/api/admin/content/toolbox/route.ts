@@ -13,7 +13,7 @@ async function verifyAdmin() {
     .from('profiles')
     .select('role')
     .eq('id', user.id)
-    .single()
+    .single() as { data: { role: string } | null }
 
   if (!profile || (profile.role !== 'supervisor' && profile.role !== 'admin')) {
     return { error: 'Not authorized', status: 403 }

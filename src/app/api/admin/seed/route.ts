@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { toolboxData } from '@/data/toolbox'
 import { messages, tags } from '@/data/messages'
@@ -8,28 +8,34 @@ import { resourceCategories } from '@/data/resources'
 // Only supervisors can run this
 export async function POST() {
   try {
-    const supabase = await createClient()
-    if (!supabase) {
+    const authClient = await createClient()
+    if (!authClient) {
       return NextResponse.json({ error: 'Supabase not configured' }, { status: 500 })
     }
 
     // Verify admin/supervisor role
-    const { data: { user } } = await supabase.auth.getUser()
+    const { data: { user } } = await authClient.auth.getUser()
     if (!user) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
 
-    const { data: profile } = await supabase
+    const { data: profile } = await authClient
       .from('profiles')
       .select('role')
       .eq('id', user.id)
-      .single()
+      .single() as { data: { role: string } | null }
 
     if (!profile || profile.role !== 'supervisor') {
       return NextResponse.json({ error: 'Only supervisors can seed data' }, { status: 403 })
     }
 
-    const results: any = { toolbox: {}, messages: {}, resources: {} }
+    // Use admin client for seeding to bypass type restrictions
+    const supabase = createAdminClient()
+    if (!supabase) {
+      return NextResponse.json({ error: 'Admin client not configured' }, { status: 500 })
+    }
+
+    const results: Record<string, unknown> = { toolbox: {}, messages: {}, resources: {} }
 
     // === SEED TOOLBOX ===
     for (let i = 0; i < toolboxData.length; i++) {

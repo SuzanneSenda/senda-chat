@@ -1,8 +1,35 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { SupabaseClient } from '@supabase/supabase-js'
+
+// Types for database entities
+interface MessageTag {
+  id: string
+  slug: string
+  label: string
+  sort_order: number
+}
+
+interface MessageTagRelation {
+  tag_id: string
+}
+
+interface Message {
+  id: string
+  title: string
+  content: string
+  usage_hint: string | null
+  sort_order: number
+  is_active: boolean
+  message_tag_relations?: MessageTagRelation[]
+}
+
+interface SortOrderResult {
+  sort_order: number
+}
 
 // Helper to verify admin access
-async function verifyAdmin() {
+async function verifyAdmin(): Promise<{ error: string; status: number } | { user: { id: string }; profile: { role: string } }> {
   const supabase = await createClient()
   if (!supabase) return { error: 'Supabase not configured', status: 500 }
 
@@ -13,7 +40,7 @@ async function verifyAdmin() {
     .from('profiles')
     .select('role')
     .eq('id', user.id)
-    .single()
+    .single() as { data: { role: string } | null }
 
   if (!profile || (profile.role !== 'supervisor' && profile.role !== 'admin')) {
     return { error: 'Not authorized', status: 403 }
@@ -30,13 +57,13 @@ export async function GET() {
       return NextResponse.json({ error: auth.error }, { status: auth.status })
     }
 
-    const adminClient = createAdminClient()
+    const adminClient = createAdminClient() as SupabaseClient
     if (!adminClient) {
       return NextResponse.json({ error: 'Admin client not configured' }, { status: 500 })
     }
 
     // Fetch tags
-    const { data: tags, error: tagsError } = await (adminClient as any)
+    const { data: tags, error: tagsError } = await adminClient
       .from('message_tags')
       .select('id, slug, label, sort_order')
       .order('sort_order')
@@ -46,7 +73,7 @@ export async function GET() {
     }
 
     // Fetch messages with tag relations
-    const { data: messages, error } = await (adminClient as any)
+    const { data: messages, error } = await adminClient
       .from('messages')
       .select(`
         id,
@@ -66,11 +93,11 @@ export async function GET() {
     }
 
     // Map tag IDs to tag slugs
-    const tagMap = new Map((tags || []).map((t: any) => [t.id, t.slug]))
+    const tagMap = new Map((tags as MessageTag[] || []).map((t) => [t.id, t.slug]))
     
-    const messagesWithTags = (messages || []).map((m: any) => ({
+    const messagesWithTags = (messages as Message[] || []).map((m) => ({
       ...m,
-      tags: (m.message_tag_relations || []).map((r: any) => tagMap.get(r.tag_id)).filter(Boolean)
+      tags: (m.message_tag_relations || []).map((r) => tagMap.get(r.tag_id)).filter(Boolean)
     }))
 
     return NextResponse.json({ messages: messagesWithTags, tags: tags || [] })
@@ -88,7 +115,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: auth.error }, { status: auth.status })
     }
 
-    const adminClient = createAdminClient()
+    const adminClient = createAdminClient() as SupabaseClient
     if (!adminClient) {
       return NextResponse.json({ error: 'Admin client not configured' }, { status: 500 })
     }
@@ -99,16 +126,16 @@ export async function POST(request: Request) {
     if (type === 'tag') {
       const { slug, label } = body
       
-      const { data: maxOrder } = await (adminClient as any)
+      const { data: maxOrder } = await adminClient
         .from('message_tags')
         .select('sort_order')
         .order('sort_order', { ascending: false })
         .limit(1)
         .single()
       
-      const sort_order = ((maxOrder as any)?.sort_order ?? -1) + 1
+      const sort_order = ((maxOrder as SortOrderResult | null)?.sort_order ?? -1) + 1
 
-      const { data, error } = await (adminClient as any)
+      const { data, error } = await adminClient
         .from('message_tags')
         .insert({ slug: slug || `tag-${Date.now()}`, label, sort_order })
         .select()
@@ -125,16 +152,16 @@ export async function POST(request: Request) {
     if (type === 'message') {
       const { title, content, usage_hint, tags: tagSlugs } = body
       
-      const { data: maxOrder } = await (adminClient as any)
+      const { data: maxOrder } = await adminClient
         .from('messages')
         .select('sort_order')
         .order('sort_order', { ascending: false })
         .limit(1)
         .single()
       
-      const sort_order = ((maxOrder as any)?.sort_order ?? -1) + 1
+      const sort_order = ((maxOrder as SortOrderResult | null)?.sort_order ?? -1) + 1
 
-      const { data: message, error } = await (adminClient as any)
+      const { data: message, error } = await adminClient
         .from('messages')
         .insert({ title, content, usage_hint, sort_order })
         .select()
@@ -147,19 +174,19 @@ export async function POST(request: Request) {
 
       // Link tags if provided
       if (tagSlugs && tagSlugs.length > 0) {
-        const { data: allTags } = await (adminClient as any)
+        const { data: allTags } = await adminClient
           .from('message_tags')
           .select('id, slug')
         
-        const tagMap = new Map((allTags || []).map((t: any) => [t.slug, t.id]))
+        const tagMap = new Map((allTags as MessageTag[] || []).map((t) => [t.slug, t.id]))
         
-        const tagRelations = tagSlugs
-          .map((slug: string) => tagMap.get(slug))
+        const tagRelations = (tagSlugs as string[])
+          .map((slug) => tagMap.get(slug))
           .filter(Boolean)
-          .map((tagId: string) => ({ message_id: message.id, tag_id: tagId }))
+          .map((tagId) => ({ message_id: (message as Message).id, tag_id: tagId }))
         
         if (tagRelations.length > 0) {
-          await (adminClient as any)
+          await adminClient
             .from('message_tag_relations')
             .insert(tagRelations)
         }
@@ -183,7 +210,7 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: auth.error }, { status: auth.status })
     }
 
-    const adminClient = createAdminClient()
+    const adminClient = createAdminClient() as SupabaseClient
     if (!adminClient) {
       return NextResponse.json({ error: 'Admin client not configured' }, { status: 500 })
     }
@@ -194,7 +221,7 @@ export async function PUT(request: Request) {
     if (type === 'tag') {
       const { label } = body
 
-      const { data, error } = await (adminClient as any)
+      const { data, error } = await adminClient
         .from('message_tags')
         .update({ label })
         .eq('id', id)
@@ -212,7 +239,7 @@ export async function PUT(request: Request) {
     if (type === 'message') {
       const { title, content, usage_hint, tags: tagSlugs } = body
 
-      const { data, error } = await (adminClient as any)
+      const { data, error } = await adminClient
         .from('messages')
         .update({ title, content, usage_hint, updated_at: new Date().toISOString() })
         .eq('id', id)
@@ -227,26 +254,26 @@ export async function PUT(request: Request) {
       // Update tag relations if provided
       if (tagSlugs !== undefined) {
         // Remove existing relations
-        await (adminClient as any)
+        await adminClient
           .from('message_tag_relations')
           .delete()
           .eq('message_id', id)
         
         // Add new relations
         if (tagSlugs.length > 0) {
-          const { data: allTags } = await (adminClient as any)
+          const { data: allTags } = await adminClient
             .from('message_tags')
             .select('id, slug')
           
-          const tagMap = new Map((allTags || []).map((t: any) => [t.slug, t.id]))
+          const tagMap = new Map((allTags as MessageTag[] || []).map((t) => [t.slug, t.id]))
           
-          const tagRelations = tagSlugs
-            .map((slug: string) => tagMap.get(slug))
+          const tagRelations = (tagSlugs as string[])
+            .map((slug) => tagMap.get(slug))
             .filter(Boolean)
-            .map((tagId: string) => ({ message_id: id, tag_id: tagId }))
+            .map((tagId) => ({ message_id: id, tag_id: tagId }))
           
           if (tagRelations.length > 0) {
-            await (adminClient as any)
+            await adminClient
               .from('message_tag_relations')
               .insert(tagRelations)
           }
@@ -271,7 +298,7 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: auth.error }, { status: auth.status })
     }
 
-    const adminClient = createAdminClient()
+    const adminClient = createAdminClient() as SupabaseClient
     if (!adminClient) {
       return NextResponse.json({ error: 'Admin client not configured' }, { status: 500 })
     }
@@ -286,7 +313,7 @@ export async function DELETE(request: Request) {
 
     if (type === 'tag') {
       // Hard delete tag (cascade will remove relations)
-      const { error } = await (adminClient as any)
+      const { error } = await adminClient
         .from('message_tags')
         .delete()
         .eq('id', id)
@@ -300,7 +327,7 @@ export async function DELETE(request: Request) {
     }
 
     if (type === 'message') {
-      const { error } = await (adminClient as any)
+      const { error } = await adminClient
         .from('messages')
         .update({ is_active: false })
         .eq('id', id)

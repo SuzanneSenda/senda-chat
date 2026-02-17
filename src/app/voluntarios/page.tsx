@@ -169,7 +169,7 @@ export default function ToolboxPage() {
 
         {filteredSections.length === 0 && searchQuery && (
           <div className="text-center py-12 text-[var(--muted)]">
-            No se encontraron resultados para "{searchQuery}"
+            No se encontraron resultados para &quot;{searchQuery}&quot;
           </div>
         )}
       </div>

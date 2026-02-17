@@ -24,7 +24,7 @@ const DEFAULT_CONFIG: ChannelConfig = {
 };
 
 // GET: Fetch current channel settings
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     // First, try to get from app_settings table
     const { data, error } = await supabaseAdmin

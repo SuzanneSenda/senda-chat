@@ -10,6 +10,7 @@ export function createClient() {
 
   if (!supabaseUrl || !supabaseAnonKey) {
     console.warn('Supabase not configured - auth will not work')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return null as any
   }
 

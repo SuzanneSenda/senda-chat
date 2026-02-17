@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
 // Format Mexican phone number to +521 format
@@ -205,7 +204,7 @@ function ChannelManager() {
 function VolunteerChart({ volunteerStats }: { volunteerStats: { id: string; name: string; conversations: number }[] }) {
   const [expanded, setExpanded] = useState(false)
   const displayStats = expanded ? volunteerStats : volunteerStats.slice(0, 5)
-  const maxConvs = Math.max(...volunteerStats.map((v: any) => v.conversations), 1)
+  const maxConvs = Math.max(...volunteerStats.map((v) => v.conversations), 1)
   const colors = ['from-[var(--sage)] to-emerald-400', 'from-blue-400 to-blue-500', 'from-purple-400 to-purple-500', 'from-pink-400 to-pink-500', 'from-orange-400 to-orange-500', 'from-teal-400 to-teal-500']
 
   return (
@@ -299,8 +298,8 @@ function ResetDataSection() {
         setResult(null)
         window.location.reload()
       }, 2000)
-    } catch (error: any) {
-      setResult({ type: 'error', text: error.message })
+    } catch (error) {
+      setResult({ type: 'error', text: error instanceof Error ? error.message : 'Error desconocido' })
     }
     setLoading(false)
   }
@@ -384,31 +383,73 @@ function ResetDataSection() {
   )
 }
 
+// Stats types
+interface ScoreDistribution {
+  score: number
+  count: number
+}
+
+interface VolunteerStat {
+  id: string
+  name: string
+  conversations: number
+}
+
+interface VolunteerRatingStat {
+  id: string
+  name: string
+  avgRating: string
+  totalRatings: number
+}
+
+interface DailyStat {
+  date: string
+  label: string
+  conversations: number
+}
+
+interface HourlyStat {
+  hour: number
+  label: string
+  conversations: number
+}
+
+interface StatsData {
+  totalConversations: number
+  closedConversations: number
+  surveyResponses: number
+  averageScore: string | null
+  responseRate: number
+  avgDurationMin: number | null
+  dataStartDate: string | null
+  scoreDistribution: ScoreDistribution[]
+  volunteerStats: VolunteerStat[]
+  volunteerRatingStats: VolunteerRatingStat[]
+  dailyStats: DailyStat[]
+  hourlyStats: HourlyStat[]
+}
+
 // Stats Dashboard Component
 function StatsDashboard() {
-  const [stats, setStats] = useState<any>(null)
+  const [stats, setStats] = useState<StatsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [dateFilter, setDateFilter] = useState<'week' | 'month' | 'all'>('all')
 
-  const fetchStats = (filter: string) => {
+  useEffect(() => {
     setLoading(true)
-    fetch(`/api/admin/stats?period=${filter}`)
+    fetch(`/api/admin/stats?period=${dateFilter}`)
       .then(res => res.json())
       .then(data => {
         setStats(data)
         setLoading(false)
       })
       .catch(() => setLoading(false))
-  }
-
-  useEffect(() => {
-    fetchStats(dateFilter)
   }, [dateFilter])
 
   const exportCSV = () => {
     if (!stats) return
     
-    const rows = [
+    const rows: (string | number)[][] = [
       ['Métrica', 'Valor'],
       ['Período', dateFilter === 'week' ? 'Esta semana' : dateFilter === 'month' ? 'Este mes' : 'Todo'],
       ['Conversaciones totales', stats.totalConversations || 0],
@@ -420,15 +461,15 @@ function StatsDashboard() {
       [''],
       ['Distribución de calificaciones'],
       ['Calificación', 'Cantidad'],
-      ...(stats.scoreDistribution || []).map((s: any) => [s.score, s.count]),
+      ...(stats.scoreDistribution || []).map((s) => [s.score, s.count]),
       [''],
       ['Conversaciones por voluntario'],
       ['Voluntario', 'Conversaciones'],
-      ...(stats.volunteerStats || []).map((v: any) => [v.name, v.conversations]),
+      ...(stats.volunteerStats || []).map((v) => [v.name, v.conversations]),
       [''],
       ['Calificación por voluntario'],
       ['Voluntario', 'Calificación promedio', 'Total calificaciones'],
-      ...(stats.volunteerRatingStats || []).map((v: any) => [v.name, v.avgRating, v.totalRatings])
+      ...(stats.volunteerRatingStats || []).map((v) => [v.name, v.avgRating, v.totalRatings])
     ]
     
     const csv = rows.map(row => row.join(',')).join('\n')
@@ -553,8 +594,8 @@ function StatsDashboard() {
         <div className="bg-white p-5 rounded-xl border border-gray-200 mb-6">
           <p className="text-sm font-semibold text-gray-800 mb-4">Distribución de calificaciones</p>
           <div className="flex items-end gap-3 h-32">
-            {stats.scoreDistribution.map((item: { score: number; count: number }) => {
-              const maxCount = Math.max(...stats.scoreDistribution.map((s: any) => s.count), 1)
+            {stats.scoreDistribution.map((item) => {
+              const maxCount = Math.max(...stats.scoreDistribution.map((s) => s.count), 1)
               const height = (item.count / maxCount) * 100
               const colors = [
                 'from-red-400 to-red-500',
@@ -614,7 +655,7 @@ function StatsDashboard() {
         <div className="bg-white p-5 rounded-xl border border-gray-200 mb-6">
           <p className="text-sm font-semibold text-gray-800 mb-4">⭐ Calificación por voluntario</p>
           <div className="space-y-3">
-            {stats.volunteerRatingStats.map((vol: { id: string; name: string; avgRating: string; totalRatings: number }) => {
+            {stats.volunteerRatingStats.map((vol) => {
               const rating = parseFloat(vol.avgRating)
               const width = (rating / 5) * 100
               const getColor = (r: number) => {
@@ -653,8 +694,8 @@ function StatsDashboard() {
         <div className="bg-white p-5 rounded-xl border border-gray-200 mb-6">
           <p className="text-sm font-semibold text-gray-800 mb-4">💬 Conversaciones por día (últimos 7 días)</p>
           <div className="flex items-end gap-3 h-40">
-            {stats.dailyStats.map((day: { date: string; label: string; conversations: number }) => {
-              const maxConvs = Math.max(...stats.dailyStats.map((d: any) => d.conversations), 1)
+            {stats.dailyStats.map((day) => {
+              const maxConvs = Math.max(...stats.dailyStats.map((d) => d.conversations), 1)
               const height = (day.conversations / maxConvs) * 100
               return (
                 <div key={day.date} className="flex-1 flex flex-col items-center">
@@ -672,12 +713,12 @@ function StatsDashboard() {
       )}
 
       {/* Hourly Conversations Chart */}
-      {stats.hourlyStats && stats.hourlyStats.some((h: any) => h.conversations > 0) ? (
+      {stats.hourlyStats && stats.hourlyStats.some((h) => h.conversations > 0) ? (
         <div className="bg-white p-5 rounded-xl border border-gray-200">
           <p className="text-sm font-semibold text-gray-800 mb-4">🕐 Conversaciones por horario</p>
           <div className="flex items-end gap-1 h-32">
-            {stats.hourlyStats.map((hour: { hour: number; label: string; conversations: number }) => {
-              const maxConvs = Math.max(...stats.hourlyStats.map((h: any) => h.conversations), 1)
+            {stats.hourlyStats.map((hour) => {
+              const maxConvs = Math.max(...stats.hourlyStats.map((h) => h.conversations), 1)
               const height = (hour.conversations / maxConvs) * 100
               const isActive = hour.conversations > 0
               return (
@@ -738,18 +779,6 @@ const roleColors = {
   voluntario: 'bg-[#d3e4e5]/40 text-[#7a9a9e] border-[#d3e4e5]',
 }
 
-const statusLabels = {
-  pending: 'Pendiente',
-  active: 'Activo',
-  inactive: 'Inactivo',
-}
-
-const statusColors = {
-  pending: 'bg-yellow-100 text-yellow-800',
-  active: 'bg-green-100 text-green-800',
-  inactive: 'bg-gray-100 text-gray-800',
-}
-
 export default function AdminPage() {
   const [userId, setUserId] = useState<string | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
@@ -759,7 +788,6 @@ export default function AdminPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const router = useRouter()
-  const supabase = createClient()
   const initRef = useRef(false)
 
   // Initialize: fetch data from server-side API routes
@@ -830,7 +858,7 @@ export default function AdminPage() {
           console.log('Admin: users API result:', usersData.users?.length)
           
           if (Array.isArray(usersData.users)) {
-            const mappedUsers = usersData.users.map((u: any) => ({
+            const mappedUsers = usersData.users.map((u: UserProfile) => ({
               id: u.id,
               email: u.email,
               full_name: u.full_name,
@@ -880,8 +908,8 @@ export default function AdminPage() {
 
       setUsers(users.map(u => u.id === userId ? { ...u, role: newRole } : u))
       setMessage({ type: 'success', text: 'Rol actualizado correctamente' })
-    } catch (error: any) {
-      setMessage({ type: 'error', text: error.message || 'Error al actualizar rol' })
+    } catch (error) {
+      setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Error al actualizar rol' })
     }
     
     setActionLoading(null)
@@ -905,8 +933,8 @@ export default function AdminPage() {
 
       setUsers(users.map(u => u.id === userId ? { ...u, status: newStatus } : u))
       setMessage({ type: 'success', text: newStatus === 'active' ? 'Usuario aprobado' : 'Estado actualizado' })
-    } catch (error: any) {
-      setMessage({ type: 'error', text: error.message || 'Error al actualizar estado' })
+    } catch (error) {
+      setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Error al actualizar estado' })
     }
     
     setActionLoading(null)
@@ -957,8 +985,8 @@ export default function AdminPage() {
 
       setUsers(users.filter(u => u.id !== userId))
       setMessage({ type: 'success', text: 'Usuario eliminado' })
-    } catch (error: any) {
-      setMessage({ type: 'error', text: error.message || 'Error al eliminar usuario' })
+    } catch (error) {
+      setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Error al eliminar usuario' })
     }
     
     setActionLoading(null)
@@ -1199,7 +1227,7 @@ export default function AdminPage() {
                         <div className="flex items-center justify-end gap-2">
                           <select
                             value={u.role}
-                            onChange={(e) => updateUserRole(u.id, e.target.value as any)}
+                            onChange={(e) => updateUserRole(u.id, e.target.value as 'supervisor' | 'admin' | 'voluntario')}
                             disabled={actionLoading === u.id}
                             className="text-sm border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[var(--sage)]"
                           >

@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
       .from('profiles')
       .select('role')
       .eq('id', user.id)
-      .single();
+      .single() as { data: { role: string } | null };
 
     if (!profile || profile.role !== 'supervisor') {
       return NextResponse.json({ error: 'Only supervisors can reset data' }, { status: 403 });
