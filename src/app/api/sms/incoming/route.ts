@@ -35,10 +35,10 @@ const EMERGENCY_MESSAGE = `Gracias por comunicarte.
 
 Si estás pasando por un momento difícil y necesitas apoyo inmediato:
 
-SAPTEL (24/7): 55 5259-8121
+SAPTEL (24/7): 55 5259 8121
 Línea de la Vida: 800-911-2000
 
-No estás solo/a. Hay personas dispuestas a ayudarte.`;
+Recuerda que no estás solo/a. En estas líneas de apoyo estamos para ti, mereces ser escuchado.`;
 
 // Check if SMS channel is enabled
 async function isSmsEnabled(): Promise<boolean> {
