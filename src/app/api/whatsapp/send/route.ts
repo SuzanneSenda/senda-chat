@@ -58,24 +58,30 @@ export async function POST(request: NextRequest) {
       }, { status: 500 });
     }
 
-    // Store outbound message in database using admin client to bypass RLS
-    if (adminClient) {
-      const { error: dbError } = await (adminClient as any)
-        .from('whatsapp_messages')
-        .insert({
-          phone_number: to.replace('whatsapp:', ''),
-          sender_name: 'Senda Chat',
-          message_body: message,
-          twilio_sid: twilioData.sid,
-          direction: 'outbound',
-          status: 'sent',
-          volunteer_id: user.id,
-        });
+    // Store outbound message in database
+    const messageData = {
+      phone_number: to.replace('whatsapp:', ''),
+      sender_name: 'Senda Chat',
+      message_body: message,
+      twilio_sid: twilioData.sid,
+      direction: 'outbound',
+      status: 'sent',
+      volunteer_id: user.id,
+    };
 
-      if (dbError) {
-        console.error('Error storing message:', dbError);
-        // Don't fail - message was sent
-      }
+    // Try admin client first (bypasses RLS), fall back to regular client
+    const dbClient = adminClient || supabase;
+    console.log('[send] Using admin client:', !!adminClient, 'volunteer_id:', user.id);
+    
+    const { error: dbError } = await (dbClient as any)
+      .from('whatsapp_messages')
+      .insert(messageData);
+
+    if (dbError) {
+      console.error('[send] Error storing message:', dbError);
+      // Don't fail - message was sent via Twilio
+    } else {
+      console.log('[send] Message stored successfully with volunteer_id:', user.id);
     }
 
     return NextResponse.json({ 
