@@ -246,14 +246,14 @@ function ResetDataSection() {
       <div className="mb-8 p-4 bg-red-50 border border-red-200 rounded-xl">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="font-semibold text-red-800">Reset para Producción</h3>
+            <h3 className="font-semibold text-red-800">Eliminar estadísticas</h3>
             <p className="text-sm text-red-600">Elimina todas las conversaciones y mensajes de prueba</p>
           </div>
           <button
             onClick={() => setShowModal(true)}
             className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
           >
-            Resetear Datos
+            Eliminar Datos
           </button>
         </div>
       </div>
