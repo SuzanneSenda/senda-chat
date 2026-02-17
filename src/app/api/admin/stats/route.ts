@@ -191,108 +191,78 @@ export async function GET(request: NextRequest) {
     const { data: oldestMsg } = await oldestQuery as { data: { created_at: string }[] | null };
     const dataStartDate = oldestMsg?.[0]?.created_at || null;
 
-    // Get volunteer stats (conversations and ratings per volunteer)
-    let volunteerMsgsQuery = supabase
-      .from('whatsapp_messages')
-      .select('volunteer_id, phone_number')
-      .eq('direction', 'outbound')
-      .not('volunteer_id', 'is', null);
+    // Get volunteer stats from conversation_stats table
+    let statsQuery = supabase
+      .from('conversation_stats')
+      .select('*');
     
     if (dateFilter) {
-      volunteerMsgsQuery = volunteerMsgsQuery.gte('created_at', dateFilter);
+      statsQuery = statsQuery.gte('closed_at', dateFilter);
     }
     
-    const { data: volunteerMsgs } = await volunteerMsgsQuery as { data: { volunteer_id: string; phone_number: string }[] | null };
-
-    // Get volunteer profiles
-    const { data: profiles } = await supabase
-      .from('profiles')
-      .select('id, full_name')
-      .in('role', ['voluntario', 'admin', 'supervisor']) as { data: { id: string; full_name: string }[] | null };
-
-    const profileMap = new Map(profiles?.map(p => [p.id, p.full_name]) || []);
+    const { data: convStats } = await statsQuery as { data: { 
+      volunteer_id: string | null; 
+      volunteer_name: string | null;
+      crisis_level: number | null;
+      rating: number | null;
+      duration_minutes: number | null;
+      closed_at: string;
+    }[] | null };
 
     // Count conversations per volunteer
-    const volunteerConvs: { [key: string]: Set<string> } = {};
-    if (volunteerMsgs) {
-      for (const msg of volunteerMsgs) {
-        if (!volunteerConvs[msg.volunteer_id]) {
-          volunteerConvs[msg.volunteer_id] = new Set();
-        }
-        volunteerConvs[msg.volunteer_id].add(msg.phone_number);
-      }
-    }
-
-    const volunteerStats = Object.entries(volunteerConvs).map(([id, phones]) => ({
-      id,
-      name: profileMap.get(id) || 'Desconocido',
-      conversations: phones.size
-    })).sort((a, b) => b.conversations - a.conversations);
-
-    // Calculate ratings per volunteer
-    // Find which volunteer last messaged each phone that gave a rating
-    const volunteerRatings: { [volunteerId: string]: number[] } = {};
+    const volunteerConvCounts: { [key: string]: { name: string; count: number } } = {};
+    const volunteerRatingsFromStats: { [key: string]: number[] } = {};
+    const durations: number[] = [];
     
-    if (volunteerMsgs && Object.keys(ratingsByPhone).length > 0) {
-      // Group outbound messages by phone to find last volunteer
-      const lastVolunteerByPhone: { [phone: string]: string } = {};
-      for (const msg of volunteerMsgs) {
-        // Since we don't have timestamp in this query, we'll use any volunteer who messaged
-        lastVolunteerByPhone[msg.phone_number] = msg.volunteer_id;
-      }
-      
-      // Associate ratings with volunteers
-      for (const [phone, rating] of Object.entries(ratingsByPhone)) {
-        const volunteerId = lastVolunteerByPhone[phone];
-        if (volunteerId) {
-          if (!volunteerRatings[volunteerId]) {
-            volunteerRatings[volunteerId] = [];
+    if (convStats) {
+      for (const stat of convStats) {
+        // Track duration
+        if (stat.duration_minutes !== null && stat.duration_minutes > 0) {
+          durations.push(stat.duration_minutes);
+        }
+        
+        // Track volunteer conversations
+        if (stat.volunteer_id) {
+          if (!volunteerConvCounts[stat.volunteer_id]) {
+            volunteerConvCounts[stat.volunteer_id] = {
+              name: stat.volunteer_name || 'Desconocido',
+              count: 0
+            };
           }
-          volunteerRatings[volunteerId].push(rating);
+          volunteerConvCounts[stat.volunteer_id].count++;
+          
+          // Track volunteer ratings
+          if (stat.rating !== null) {
+            if (!volunteerRatingsFromStats[stat.volunteer_id]) {
+              volunteerRatingsFromStats[stat.volunteer_id] = [];
+            }
+            volunteerRatingsFromStats[stat.volunteer_id].push(stat.rating);
+          }
         }
       }
     }
+
+    const volunteerStats = Object.entries(volunteerConvCounts)
+      .map(([id, data]) => ({
+        id,
+        name: data.name,
+        conversations: data.count
+      }))
+      .sort((a, b) => b.conversations - a.conversations);
 
     // Build volunteer ratings stats
-    const volunteerRatingStats = Object.entries(volunteerRatings).map(([id, ratings]) => ({
-      id,
-      name: profileMap.get(id) || 'Desconocido',
-      avgRating: (ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1),
-      totalRatings: ratings.length
-    })).sort((a, b) => parseFloat(b.avgRating) - parseFloat(a.avgRating));
+    const volunteerRatingStats = Object.entries(volunteerRatingsFromStats)
+      .map(([id, ratings]) => ({
+        id,
+        name: volunteerConvCounts[id]?.name || 'Desconocido',
+        avgRating: (ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1),
+        totalRatings: ratings.length
+      }))
+      .sort((a, b) => parseFloat(b.avgRating) - parseFloat(a.avgRating));
 
-    // Calculate average conversation duration (time from first to last message per phone)
-    let allMsgsQuery = supabase
-      .from('whatsapp_messages')
-      .select('phone_number, created_at')
-      .order('created_at', { ascending: true });
-    
-    if (dateFilter) {
-      allMsgsQuery = allMsgsQuery.gte('created_at', dateFilter);
-    }
-    
-    const { data: allMsgs } = await allMsgsQuery as { data: { phone_number: string; created_at: string }[] | null };
-    
-    const convDurations: number[] = [];
-    if (allMsgs) {
-      const byPhone: { [key: string]: string[] } = {};
-      for (const msg of allMsgs) {
-        if (!byPhone[msg.phone_number]) byPhone[msg.phone_number] = [];
-        byPhone[msg.phone_number].push(msg.created_at);
-      }
-      
-      for (const times of Object.values(byPhone)) {
-        if (times.length >= 2) {
-          const first = new Date(times[0]).getTime();
-          const last = new Date(times[times.length - 1]).getTime();
-          const durationMin = (last - first) / (1000 * 60);
-          if (durationMin > 0) convDurations.push(durationMin);
-        }
-      }
-    }
-    
-    const avgDurationMin = convDurations.length > 0 
-      ? Math.round(convDurations.reduce((a, b) => a + b, 0) / convDurations.length)
+    // Calculate average duration from stats table
+    const avgDurationMin = durations.length > 0 
+      ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length)
       : null;
 
     return NextResponse.json({

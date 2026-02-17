@@ -321,11 +321,14 @@ export async function POST(request: NextRequest) {
     } else if (existingConv.conversation_state === 'pending_delete') {
       // Handle survey response (existing logic)
       const closedAt = new Date(existingConv.closed_at);
+      const createdAt = new Date(existingConv.created_at);
       const now = new Date();
       const secondsSinceClosed = (now.getTime() - closedAt.getTime()) / 1000;
       const isSurveyResponse = /^[1-5]$/.test(trimmedBody);
       
-      if (secondsSinceClosed <= 30 && isSurveyResponse) {
+      let rating: number | null = null;
+      if (secondsSinceClosed <= 60 && isSurveyResponse) {
+        rating = parseInt(trimmedBody);
         await supabaseAdmin
           .from('whatsapp_messages')
           .insert({
@@ -337,6 +340,38 @@ export async function POST(request: NextRequest) {
             status: 'survey_response'
           });
         console.log(`📊 Survey response saved: ${trimmedBody}`);
+      }
+      
+      // Calculate duration in minutes
+      const durationMinutes = Math.round((closedAt.getTime() - createdAt.getTime()) / (1000 * 60));
+      
+      // Get volunteer name if assigned
+      let volunteerName: string | null = null;
+      if (existingConv.assigned_to) {
+        const { data: volunteer } = await supabaseAdmin
+          .from('profiles')
+          .select('full_name')
+          .eq('id', existingConv.assigned_to)
+          .single();
+        volunteerName = volunteer?.full_name || null;
+      }
+      
+      // Save stats BEFORE deleting
+      const { error: statsError } = await supabaseAdmin
+        .from('conversation_stats')
+        .insert({
+          volunteer_id: existingConv.assigned_to,
+          volunteer_name: volunteerName,
+          crisis_level: existingConv.crisis_level,
+          rating: rating,
+          duration_minutes: durationMinutes,
+          closed_at: existingConv.closed_at
+        });
+      
+      if (statsError) {
+        console.error('❌ Error saving conversation stats:', statsError);
+      } else {
+        console.log(`📊 Stats saved: volunteer=${volunteerName}, crisis=${existingConv.crisis_level}, rating=${rating}, duration=${durationMinutes}min`);
       }
       
       // Delete conversation
