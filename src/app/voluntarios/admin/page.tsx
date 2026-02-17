@@ -247,7 +247,6 @@ function ResetDataSection() {
         <div className="flex items-center justify-between">
           <div>
             <h3 className="font-semibold text-red-800">Eliminar estadísticas</h3>
-            <p className="text-sm text-red-600">Elimina todas las conversaciones y mensajes de prueba</p>
           </div>
           <button
             onClick={() => setShowModal(true)}
