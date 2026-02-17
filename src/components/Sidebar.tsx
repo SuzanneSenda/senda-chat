@@ -67,7 +67,7 @@ function NotificationPermissionBanner() {
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const { profile, loading, refreshProfile } = useAuth();
+  const { user, profile, loading, refreshProfile } = useAuth();
   const { unreadCount, hasNewMessage, clearNew } = useNotificationContext();
   const [isOpen, setIsOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -79,6 +79,9 @@ export default function Sidebar() {
   
   // Show admin section if user is admin/supervisor
   const isAdmin = profile?.role === 'supervisor' || profile?.role === 'admin';
+  
+  // Still loading profile if we have a user but no profile yet
+  const profileLoading = loading || (user && !profile);
 
   // Clear new message indicator when viewing conversations
   useEffect(() => {
@@ -304,8 +307,8 @@ export default function Sidebar() {
             );
           })}
           
-          {/* Admin Section - Only hide when explicitly NOT admin (loading=false and role=voluntario) */}
-          {(loading || isAdmin) && (
+          {/* Admin Section - Only hide when explicitly NOT admin (profile loaded and role=voluntario) */}
+          {(profileLoading || isAdmin) && (
             <>
               <div className="border-t border-[var(--border)] my-4"></div>
               <Link
@@ -314,7 +317,7 @@ export default function Sidebar() {
                   pathname === '/voluntarios/admin'
                     ? 'bg-[#d6865d] text-white'
                     : 'hover:bg-[#d6865d]/10 text-[#d6865d]'
-                } ${loading && !isAdmin ? 'opacity-50' : ''}`}
+                } ${profileLoading && !isAdmin ? 'opacity-50' : ''}`}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
