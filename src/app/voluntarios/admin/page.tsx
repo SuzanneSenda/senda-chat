@@ -261,9 +261,9 @@ function ResetDataSection() {
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-2xl">
-            <h3 className="text-lg font-bold text-red-600 mb-2">⚠️ Confirmar Reset</h3>
+            <h3 className="text-lg font-bold text-red-600 mb-2">⚠️ Confirmar eliminación</h3>
             <p className="text-gray-600 mb-4">
-              Esta acción eliminará <strong>TODAS</strong> las conversaciones y mensajes de WhatsApp. 
+              Esta acción eliminará <strong>todas</strong> las estadísticas y datos de prueba. 
               Esta acción no se puede deshacer.
             </p>
             
