@@ -532,23 +532,19 @@ function StatsDashboard() {
         </div>
       )}
 
-      {/* Main Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white p-4 rounded-xl border border-gray-200">
-          <p className="text-3xl font-bold text-[var(--sage)]">{stats.totalConversations || 0}</p>
-          <p className="text-sm text-gray-500">Conversaciones totales</p>
+      {/* Main Stats Cards - Solo 3 métricas principales */}
+      <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className="bg-gradient-to-br from-[var(--sage)]/10 to-emerald-50 p-5 rounded-xl border border-[var(--sage)]/20">
+          <p className="text-4xl font-bold text-[var(--sage)]">{stats.totalConversations || 0}</p>
+          <p className="text-sm text-gray-600 mt-1">Conversaciones totales</p>
         </div>
-        <div className="bg-white p-4 rounded-xl border border-gray-200">
-          <p className="text-3xl font-bold text-blue-500">{stats.closedConversations || 0}</p>
-          <p className="text-sm text-gray-500">Conversaciones cerradas</p>
+        <div className="bg-gradient-to-br from-amber-50 to-orange-50 p-5 rounded-xl border border-amber-200">
+          <p className="text-4xl font-bold text-amber-600">{stats.averageScore || '-'}<span className="text-lg text-amber-400">/5</span></p>
+          <p className="text-sm text-gray-600 mt-1">Calificación promedio</p>
         </div>
-        <div className="bg-white p-4 rounded-xl border border-gray-200">
-          <p className="text-3xl font-bold text-purple-500">{stats.surveyResponses || 0}</p>
-          <p className="text-sm text-gray-500">Respuestas a encuesta</p>
-        </div>
-        <div className="bg-white p-4 rounded-xl border border-gray-200">
-          <p className="text-3xl font-bold text-amber-500">{stats.averageScore || '-'}</p>
-          <p className="text-sm text-gray-500">Calificación promedio</p>
+        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-5 rounded-xl border border-blue-200">
+          <p className="text-4xl font-bold text-blue-600">{stats.avgDurationMin || '-'}<span className="text-lg text-blue-400"> min</span></p>
+          <p className="text-sm text-gray-600 mt-1">Duración promedio</p>
         </div>
       </div>
 
@@ -602,33 +598,6 @@ function StatsDashboard() {
           </div>
         </div>
       )}
-
-      {/* Key Metrics Cards */}
-      <div className="grid grid-cols-2 gap-4 mb-6">
-        {/* Average Rating - Big Display */}
-        <div className="bg-gradient-to-br from-amber-50 to-orange-50 p-5 rounded-xl border border-amber-200">
-          <p className="text-sm font-semibold text-amber-800 mb-2">⭐ Calificación promedio</p>
-          <div className="flex items-center gap-3">
-            <span className="text-5xl font-bold text-amber-600">{stats.averageScore || '-'}</span>
-            <div className="text-left">
-              <p className="text-sm text-amber-700">de 5 estrellas</p>
-              <p className="text-xs text-amber-500">{stats.surveyResponses} respuestas</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Average Duration - Big Display */}
-        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-5 rounded-xl border border-blue-200">
-          <p className="text-sm font-semibold text-blue-800 mb-2">⏱️ Duración promedio</p>
-          <div className="flex items-center gap-3">
-            <span className="text-5xl font-bold text-blue-600">{stats.avgDurationMin || '-'}</span>
-            <div className="text-left">
-              <p className="text-sm text-blue-700">minutos</p>
-              <p className="text-xs text-blue-500">por conversación</p>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Conversations per Volunteer - Horizontal Bar Chart (Expandable) */}
       {stats.volunteerStats && stats.volunteerStats.length > 0 && (
