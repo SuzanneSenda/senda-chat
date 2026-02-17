@@ -4,6 +4,27 @@ import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
+// Format Mexican phone number to +521 format
+function formatMexicanPhone(phone: string): string {
+  // Remove all non-digits
+  const digits = phone.replace(/\D/g, '')
+  
+  // Handle different formats
+  if (digits.length === 10) {
+    // 10 digits: 55XXXXXXXX -> +521 55 XXXX XXXX
+    return `+521 ${digits.slice(0, 2)} ${digits.slice(2, 6)} ${digits.slice(6)}`
+  } else if (digits.length === 12 && digits.startsWith('52')) {
+    // 12 digits: 5255XXXXXXXX -> +521 55 XXXX XXXX
+    return `+521 ${digits.slice(2, 4)} ${digits.slice(4, 8)} ${digits.slice(8)}`
+  } else if (digits.length === 13 && digits.startsWith('521')) {
+    // 13 digits: 52155XXXXXXXX -> +521 55 XXXX XXXX
+    return `+521 ${digits.slice(3, 5)} ${digits.slice(5, 9)} ${digits.slice(9)}`
+  }
+  
+  // Return cleaned version if can't format
+  return phone.startsWith('+') ? phone : `+${digits}`
+}
+
 // Channel Manager Component
 function ChannelManager() {
   const [config, setConfig] = useState<{
@@ -732,15 +753,21 @@ export default function AdminPage() {
                   <td className="px-4 py-3">
                     <input
                       type="tel"
-                      placeholder="+52 55 1234 5678"
+                      placeholder="+521 55 1234 5678"
                       defaultValue={u.phone || ''}
                       onBlur={(e) => {
-                        const newPhone = e.target.value.trim()
-                        if (newPhone !== (u.phone || '')) {
-                          updateUserPhone(u.id, newPhone)
+                        const raw = e.target.value.trim()
+                        if (!raw) {
+                          if (u.phone) updateUserPhone(u.id, '')
+                          return
+                        }
+                        const formatted = formatMexicanPhone(raw)
+                        e.target.value = formatted
+                        if (formatted !== (u.phone || '')) {
+                          updateUserPhone(u.id, formatted)
                         }
                       }}
-                      className="text-sm border border-gray-200 rounded-lg px-2 py-1 w-40 focus:outline-none focus:ring-2 focus:ring-[var(--sage)]"
+                      className="text-sm border border-gray-200 rounded-lg px-2 py-1 w-44 focus:outline-none focus:ring-2 focus:ring-[var(--sage)]"
                     />
                   </td>
                   <td className="px-4 py-3">
