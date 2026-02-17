@@ -77,7 +77,7 @@ export async function updateSession(request: NextRequest) {
       await supabase.auth.signOut()
       const url = request.nextUrl.clone()
       url.pathname = '/auth/login'
-      url.searchParams.set('error', 'Tu cuenta ha sido eliminada')
+      url.searchParams.set('error', `Sin perfil (middleware:protected) - ${profileError?.message || 'profile null'}`)
       return NextResponse.redirect(url)
     }
     
@@ -108,6 +108,7 @@ export async function updateSession(request: NextRequest) {
     
     // Profile doesn't exist - user was deleted, sign them out
     if (profileError || !profile) {
+      console.log('[middleware] No profile on auth route:', profileError?.message)
       await supabase.auth.signOut()
       return supabaseResponse // Let them stay on auth page
     }

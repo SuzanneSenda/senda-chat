@@ -52,7 +52,7 @@ export async function GET(request: Request) {
           
           if (profileError) {
             console.error('[callback] Error creating profile:', profileError)
-            return NextResponse.redirect(`${origin}/auth/login?error=Error al crear perfil: ${profileError.message}`)
+            return NextResponse.redirect(`${origin}/auth/login?error=callback:create_failed:${profileError.code}:${profileError.message}`)
           }
           
           console.log('[callback] Profile created successfully, redirecting to pending')
