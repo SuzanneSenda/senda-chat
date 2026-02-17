@@ -35,9 +35,8 @@ const EMERGENCY_MESSAGE = `Gracias por comunicarte.
 
 Si estás pasando por un momento difícil y necesitas apoyo inmediato:
 
-SAPTEL (24/7): 800-290-0024
+SAPTEL (24/7): 55 5259-8121
 Línea de la Vida: 800-911-2000
-Emergencias: 911
 
 No estás solo/a. Hay personas dispuestas a ayudarte.`;
 
