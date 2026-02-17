@@ -535,50 +535,59 @@ function StatsDashboard() {
         </div>
       )}
 
-      {/* Volunteer Stats & Duration */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        {/* Conversations per Volunteer */}
-        <div className="bg-white p-5 rounded-xl border border-gray-200">
-          <p className="text-sm font-semibold text-gray-800 mb-4">Conversaciones por voluntario</p>
-          {stats.volunteerStats && stats.volunteerStats.length > 0 ? (
-            <div className="space-y-3">
-              {stats.volunteerStats.slice(0, 5).map((vol: { id: string; name: string; conversations: number }, idx: number) => (
-                <div key={vol.id} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                      idx === 0 ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-600'
-                    }`}>
-                      {idx + 1}
-                    </span>
-                    <span className="text-sm text-gray-700">{vol.name}</span>
-                  </div>
-                  <span className="text-sm font-semibold text-[var(--sage)]">{vol.conversations}</span>
-                </div>
-              ))}
+      {/* Key Metrics Cards */}
+      <div className="grid grid-cols-2 gap-4 mb-6">
+        {/* Average Rating - Big Display */}
+        <div className="bg-gradient-to-br from-amber-50 to-orange-50 p-5 rounded-xl border border-amber-200">
+          <p className="text-sm font-semibold text-amber-800 mb-2">⭐ Calificación promedio</p>
+          <div className="flex items-center gap-3">
+            <span className="text-5xl font-bold text-amber-600">{stats.averageScore || '-'}</span>
+            <div className="text-left">
+              <p className="text-sm text-amber-700">de 5 estrellas</p>
+              <p className="text-xs text-amber-500">{stats.surveyResponses} respuestas</p>
             </div>
-          ) : (
-            <p className="text-sm text-gray-400 italic">Sin datos de voluntarios</p>
-          )}
+          </div>
         </div>
 
-        {/* Average Duration */}
-        <div className="bg-white p-5 rounded-xl border border-gray-200">
-          <p className="text-sm font-semibold text-gray-800 mb-4">Duración promedio de conversación</p>
-          <div className="flex items-center justify-center h-20">
-            {stats.avgDurationMin ? (
-              <div className="text-center">
-                <p className="text-4xl font-bold text-[var(--sage)]">{stats.avgDurationMin}</p>
-                <p className="text-sm text-gray-500">minutos</p>
-              </div>
-            ) : (
-              <p className="text-sm text-gray-400 italic">Sin datos suficientes</p>
-            )}
+        {/* Average Duration - Big Display */}
+        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-5 rounded-xl border border-blue-200">
+          <p className="text-sm font-semibold text-blue-800 mb-2">⏱️ Duración promedio</p>
+          <div className="flex items-center gap-3">
+            <span className="text-5xl font-bold text-blue-600">{stats.avgDurationMin || '-'}</span>
+            <div className="text-left">
+              <p className="text-sm text-blue-700">minutos</p>
+              <p className="text-xs text-blue-500">por conversación</p>
+            </div>
           </div>
-          <p className="text-xs text-gray-400 text-center mt-2">
-            Tiempo desde el primer al último mensaje
-          </p>
         </div>
       </div>
+
+      {/* Conversations per Volunteer - Horizontal Bar Chart */}
+      {stats.volunteerStats && stats.volunteerStats.length > 0 && (
+        <div className="bg-white p-5 rounded-xl border border-gray-200 mb-6">
+          <p className="text-sm font-semibold text-gray-800 mb-4">📊 Conversaciones por voluntario</p>
+          <div className="space-y-3">
+            {stats.volunteerStats.slice(0, 6).map((vol: { id: string; name: string; conversations: number }, idx: number) => {
+              const maxConvs = Math.max(...stats.volunteerStats.map((v: any) => v.conversations), 1)
+              const width = (vol.conversations / maxConvs) * 100
+              const colors = ['from-[var(--sage)] to-emerald-400', 'from-blue-400 to-blue-500', 'from-purple-400 to-purple-500', 'from-pink-400 to-pink-500', 'from-orange-400 to-orange-500', 'from-teal-400 to-teal-500']
+              return (
+                <div key={vol.id} className="flex items-center gap-3">
+                  <span className="w-24 text-sm text-gray-600 truncate">{vol.name?.split(' ')[0] || 'Vol'}</span>
+                  <div className="flex-1 bg-gray-100 rounded-full h-6 overflow-hidden">
+                    <div 
+                      className={`h-full bg-gradient-to-r ${colors[idx % colors.length]} rounded-full flex items-center justify-end pr-2 transition-all`}
+                      style={{ width: `${Math.max(width, 10)}%` }}
+                    >
+                      <span className="text-xs font-bold text-white">{vol.conversations}</span>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Daily Messages Chart */}
       {stats.dailyStats && stats.dailyStats.length > 0 && (
