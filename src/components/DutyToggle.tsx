@@ -4,44 +4,45 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth/context';
 
 export function DutyToggle() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [isOnDuty, setIsOnDuty] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [dutyLoading, setDutyLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
 
-  // Fetch current duty status
+  // Fetch current duty status when user is available
   useEffect(() => {
+    let cancelled = false;
+
     async function fetchDutyStatus() {
+      // Wait for auth to finish loading first
+      if (authLoading) return;
+      
+      // No user = not logged in
       if (!user?.id) {
-        // If no user after a short delay, stop loading anyway
-        const timeout = setTimeout(() => setLoading(false), 1000);
-        return () => clearTimeout(timeout);
+        setDutyLoading(false);
+        return;
       }
       
       try {
         const res = await fetch('/api/duty/status');
+        if (cancelled) return;
         const data = await res.json();
+        if (cancelled) return;
         setIsOnDuty(data.isOnDuty || false);
       } catch (error) {
         console.error('Error fetching duty status:', error);
       } finally {
-        setLoading(false);
+        if (!cancelled) setDutyLoading(false);
       }
     }
 
     fetchDutyStatus();
-  }, [user?.id]);
-
-  // Safety: if still loading after 3 seconds, force stop
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      if (loading) setLoading(false);
-    }, 3000);
-    return () => clearTimeout(timeout);
-  }, [loading]);
+    
+    return () => { cancelled = true; };
+  }, [user?.id, authLoading]);
 
   const toggleDuty = async () => {
-    if (updating) return;
+    if (updating || !user?.id) return;
     
     setUpdating(true);
     const newStatus = !isOnDuty;
@@ -65,7 +66,8 @@ export function DutyToggle() {
     }
   };
 
-  if (loading) {
+  // Show loading while auth is loading
+  if (authLoading) {
     return (
       <div className="px-4 py-3 border-t border-gray-200">
         <div className="animate-pulse h-10 bg-gray-200 rounded-lg"></div>
@@ -73,7 +75,7 @@ export function DutyToggle() {
     );
   }
 
-  // If no user, show disabled state with message
+  // If auth finished but no user, they need to log in
   if (!user?.id) {
     return (
       <div className="px-4 py-3 border-t border-gray-200">
@@ -81,11 +83,17 @@ export function DutyToggle() {
           disabled
           className="w-full py-2.5 px-4 rounded-lg font-medium bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed"
         >
-          <span>Cargando sesión...</span>
+          <span>Inicia sesión primero</span>
         </button>
-        <p className="text-xs text-center text-gray-400 mt-2">
-          Actualiza la página si persiste
-        </p>
+      </div>
+    );
+  }
+
+  // Show loading while fetching duty status
+  if (dutyLoading) {
+    return (
+      <div className="px-4 py-3 border-t border-gray-200">
+        <div className="animate-pulse h-10 bg-gray-200 rounded-lg"></div>
       </div>
     );
   }
