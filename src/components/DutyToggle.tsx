@@ -12,7 +12,11 @@ export function DutyToggle() {
   // Fetch current duty status
   useEffect(() => {
     async function fetchDutyStatus() {
-      if (!user?.id) return;
+      if (!user?.id) {
+        // If no user after a short delay, stop loading anyway
+        const timeout = setTimeout(() => setLoading(false), 1000);
+        return () => clearTimeout(timeout);
+      }
       
       try {
         const res = await fetch('/api/duty/status');
@@ -27,6 +31,14 @@ export function DutyToggle() {
 
     fetchDutyStatus();
   }, [user?.id]);
+
+  // Safety: if still loading after 3 seconds, force stop
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (loading) setLoading(false);
+    }, 3000);
+    return () => clearTimeout(timeout);
+  }, [loading]);
 
   const toggleDuty = async () => {
     if (updating) return;
@@ -57,6 +69,23 @@ export function DutyToggle() {
     return (
       <div className="px-4 py-3 border-t border-gray-200">
         <div className="animate-pulse h-10 bg-gray-200 rounded-lg"></div>
+      </div>
+    );
+  }
+
+  // If no user, show disabled state with message
+  if (!user?.id) {
+    return (
+      <div className="px-4 py-3 border-t border-gray-200">
+        <button
+          disabled
+          className="w-full py-2.5 px-4 rounded-lg font-medium bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed"
+        >
+          <span>Cargando sesión...</span>
+        </button>
+        <p className="text-xs text-center text-gray-400 mt-2">
+          Actualiza la página si persiste
+        </p>
       </div>
     );
   }
