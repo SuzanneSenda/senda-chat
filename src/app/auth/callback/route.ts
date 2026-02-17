@@ -45,9 +45,11 @@ export async function GET(request: Request) {
               id: user.id,
               email: user.email || '',
               full_name: user.user_metadata?.full_name || user.user_metadata?.name || null,
-              status: 'pending', // New users need approval
-              role: 'voluntario',
-              created_at: new Date().toISOString()
+              status: 'pending' as const,
+              role: 'voluntario' as const,
+              avatar_url: null,
+              phone: null,
+              last_sign_in: null
             })
           
           if (profileError) {
