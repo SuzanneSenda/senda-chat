@@ -47,9 +47,11 @@ export async function updateSession(request: NextRequest) {
   const isAuthRoute = request.nextUrl.pathname.startsWith('/auth')
   const isPendingPage = request.nextUrl.pathname === '/auth/pending'
   const isLogoutRoute = request.nextUrl.pathname === '/auth/logout'
+  const isCallbackRoute = request.nextUrl.pathname === '/auth/callback'
   
-  // Always allow logout route to execute
-  if (isLogoutRoute) {
+  // Always allow logout and callback routes to execute without profile check
+  // Callback needs to run first to create profile for new users
+  if (isLogoutRoute || isCallbackRoute) {
     return supabaseResponse
   }
 
