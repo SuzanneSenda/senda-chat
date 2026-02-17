@@ -61,23 +61,34 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // Check if user is approved (status = 'active')
+  // Check if user is approved (status = 'active') and profile exists
   if (isProtectedRoute && user) {
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('status')
       .eq('id', user.id)
       .single()
     
-    if (profile?.status === 'pending') {
+    // Profile doesn't exist - user was deleted
+    if (profileError || !profile) {
+      // Sign out and redirect to login
+      await supabase.auth.signOut()
+      const url = request.nextUrl.clone()
+      url.pathname = '/auth/login'
+      url.searchParams.set('error', 'Tu cuenta ha sido eliminada')
+      return NextResponse.redirect(url)
+    }
+    
+    if (profile.status === 'pending') {
       // Redirect to pending approval page
       const url = request.nextUrl.clone()
       url.pathname = '/auth/pending'
       return NextResponse.redirect(url)
     }
     
-    if (profile?.status === 'inactive') {
-      // Redirect to login with error
+    if (profile.status === 'inactive') {
+      // Sign out and redirect to login with error
+      await supabase.auth.signOut()
       const url = request.nextUrl.clone()
       url.pathname = '/auth/login'
       url.searchParams.set('error', 'Tu cuenta ha sido desactivada')
@@ -87,19 +98,31 @@ export async function updateSession(request: NextRequest) {
 
   if (isAuthRoute && !isPendingPage && user) {
     // Check status before redirecting to dashboard
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('status')
       .eq('id', user.id)
       .single()
     
-    if (profile?.status === 'pending') {
+    // Profile doesn't exist - user was deleted, sign them out
+    if (profileError || !profile) {
+      await supabase.auth.signOut()
+      return supabaseResponse // Let them stay on auth page
+    }
+    
+    if (profile.status === 'pending') {
       const url = request.nextUrl.clone()
       url.pathname = '/auth/pending'
       return NextResponse.redirect(url)
     }
     
-    if (profile?.status === 'active') {
+    if (profile.status === 'inactive') {
+      // Sign them out
+      await supabase.auth.signOut()
+      return supabaseResponse
+    }
+    
+    if (profile.status === 'active') {
       // Redirect to dashboard if already logged in and approved
       const url = request.nextUrl.clone()
       url.pathname = '/voluntarios'

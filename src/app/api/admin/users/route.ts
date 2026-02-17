@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET() {
@@ -149,16 +149,35 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'No puedes eliminarte a ti mismo' }, { status: 400 })
     }
 
-    // Delete user profile (this will cascade or leave auth user orphaned)
-    const { error: deleteError } = await supabase
-      .from('profiles')
-      .delete()
-      .eq('id', userId)
+    // Use admin client to delete from Auth (this also removes their session)
+    const adminClient = createAdminClient()
+    
+    if (!adminClient) {
+      // Fallback: just delete profile if admin client not configured
+      const { error: deleteError } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', userId)
 
-    if (deleteError) {
-      console.error('Delete error:', deleteError)
-      return NextResponse.json({ error: 'Error al eliminar usuario' }, { status: 500 })
+      if (deleteError) {
+        console.error('Delete error:', deleteError)
+        return NextResponse.json({ error: 'Error al eliminar usuario' }, { status: 500 })
+      }
+      return NextResponse.json({ success: true, warning: 'Profile deleted but auth user may remain' })
     }
+
+    // Delete from Supabase Auth (this invalidates all sessions)
+    const { error: authDeleteError } = await adminClient.auth.admin.deleteUser(userId)
+    
+    if (authDeleteError) {
+      console.error('Auth delete error:', authDeleteError)
+      // Try to at least delete the profile
+      await supabase.from('profiles').delete().eq('id', userId)
+      return NextResponse.json({ error: 'Usuario eliminado parcialmente. Puede requerir limpieza manual.' }, { status: 500 })
+    }
+
+    // Profile should be deleted by cascade, but ensure it's gone
+    await supabase.from('profiles').delete().eq('id', userId)
 
     return NextResponse.json({ success: true })
   } catch (err) {
