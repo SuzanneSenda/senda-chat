@@ -27,7 +27,7 @@ export async function GET(request: Request) {
         }
         
         // Check if profile exists using admin client
-        const { data: existingProfile, error: profileCheckError } = await adminClient
+        const { data: existingProfile, error: profileCheckError } = await (adminClient as any)
           .from('profiles')
           .select('id, status')
           .eq('id', user.id)
