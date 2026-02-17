@@ -99,6 +99,16 @@ export async function GET(request: NextRequest) {
     }));
 
     // Get conversations per day (last 7 days) - count unique phone numbers
+    // Use Mexico City timezone for date calculations
+    const getMexicoDate = (date: Date) => {
+      return new Date(date.toLocaleString('en-US', { timeZone: 'America/Mexico_City' }));
+    };
+    
+    const formatMexicoDate = (date: Date) => {
+      const mx = getMexicoDate(date);
+      return `${mx.getFullYear()}-${String(mx.getMonth() + 1).padStart(2, '0')}-${String(mx.getDate()).padStart(2, '0')}`;
+    };
+
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
@@ -108,18 +118,20 @@ export async function GET(request: NextRequest) {
       .eq('direction', 'inbound')
       .gte('created_at', sevenDaysAgo.toISOString()) as { data: { created_at: string; phone_number: string }[] | null };
 
-    // Group unique phones by day
+    // Group unique phones by day (Mexico timezone)
     const convsByDay: { [key: string]: Set<string> } = {};
     for (let i = 6; i >= 0; i--) {
       const date = new Date();
       date.setDate(date.getDate() - i);
-      const key = date.toISOString().split('T')[0];
+      const key = formatMexicoDate(date);
       convsByDay[key] = new Set();
     }
 
     if (recentMessages) {
       for (const msg of recentMessages) {
-        const day = msg.created_at.split('T')[0];
+        // Convert message timestamp to Mexico timezone date
+        const msgDate = new Date(msg.created_at);
+        const day = formatMexicoDate(msgDate);
         if (convsByDay[day]) {
           convsByDay[day].add(msg.phone_number);
         }
@@ -128,7 +140,7 @@ export async function GET(request: NextRequest) {
 
     const dailyStats = Object.entries(convsByDay).map(([date, phones]) => ({
       date,
-      label: new Date(date).toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric' }),
+      label: new Date(date + 'T12:00:00').toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', timeZone: 'America/Mexico_City' }),
       conversations: phones.size
     }));
 
@@ -152,8 +164,10 @@ export async function GET(request: NextRequest) {
     
     if (hourlyMsgs) {
       for (const msg of hourlyMsgs) {
-        const hour = new Date(msg.created_at).getHours();
-        hourlyConvs[hour].add(msg.phone_number);
+        // Convert to Mexico timezone hour
+        const msgDate = new Date(msg.created_at);
+        const mexicoHour = parseInt(msgDate.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'America/Mexico_City' }));
+        hourlyConvs[mexicoHour].add(msg.phone_number);
       }
     }
     
