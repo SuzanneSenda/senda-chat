@@ -98,41 +98,38 @@ export async function GET(request: NextRequest) {
       count: surveyScores.filter(s => s === score).length
     }));
 
-    // Get messages per day (last 7 days)
+    // Get conversations per day (last 7 days) - count unique phone numbers
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
     const { data: recentMessages } = await supabase
       .from('whatsapp_messages')
-      .select('created_at, direction')
-      .gte('created_at', sevenDaysAgo.toISOString()) as { data: { created_at: string; direction: string }[] | null };
+      .select('created_at, phone_number')
+      .eq('direction', 'inbound')
+      .gte('created_at', sevenDaysAgo.toISOString()) as { data: { created_at: string; phone_number: string }[] | null };
 
-    // Group by day
-    const messagesByDay: { [key: string]: { inbound: number; outbound: number } } = {};
+    // Group unique phones by day
+    const convsByDay: { [key: string]: Set<string> } = {};
     for (let i = 6; i >= 0; i--) {
       const date = new Date();
       date.setDate(date.getDate() - i);
       const key = date.toISOString().split('T')[0];
-      messagesByDay[key] = { inbound: 0, outbound: 0 };
+      convsByDay[key] = new Set();
     }
 
     if (recentMessages) {
       for (const msg of recentMessages) {
         const day = msg.created_at.split('T')[0];
-        if (messagesByDay[day]) {
-          if (msg.direction === 'inbound') {
-            messagesByDay[day].inbound++;
-          } else {
-            messagesByDay[day].outbound++;
-          }
+        if (convsByDay[day]) {
+          convsByDay[day].add(msg.phone_number);
         }
       }
     }
 
-    const dailyStats = Object.entries(messagesByDay).map(([date, counts]) => ({
+    const dailyStats = Object.entries(convsByDay).map(([date, phones]) => ({
       date,
       label: new Date(date).toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric' }),
-      ...counts
+      conversations: phones.size
     }));
 
     // Get oldest message date for "desde" display

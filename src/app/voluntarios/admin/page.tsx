@@ -669,48 +669,25 @@ function StatsDashboard() {
         </div>
       )}
 
-      {/* Daily Messages Chart */}
+      {/* Daily Conversations Chart */}
       {stats.dailyStats && stats.dailyStats.length > 0 && (
         <div className="bg-white p-5 rounded-xl border border-gray-200">
-          <p className="text-sm font-semibold text-gray-800 mb-4">Mensajes por día (últimos 7 días)</p>
-          <div className="flex items-end gap-2 h-40">
-            {stats.dailyStats.map((day: { date: string; label: string; inbound: number; outbound: number }) => {
-              const total = day.inbound + day.outbound
-              const maxTotal = Math.max(...stats.dailyStats.map((d: any) => d.inbound + d.outbound), 1)
-              const height = (total / maxTotal) * 100
-              const inboundHeight = total > 0 ? (day.inbound / total) * 100 : 0
+          <p className="text-sm font-semibold text-gray-800 mb-4">💬 Conversaciones por día (últimos 7 días)</p>
+          <div className="flex items-end gap-3 h-40">
+            {stats.dailyStats.map((day: { date: string; label: string; conversations: number }) => {
+              const maxConvs = Math.max(...stats.dailyStats.map((d: any) => d.conversations), 1)
+              const height = (day.conversations / maxConvs) * 100
               return (
                 <div key={day.date} className="flex-1 flex flex-col items-center">
-                  <span className="text-xs font-medium text-gray-600 mb-1">{total}</span>
+                  <span className="text-sm font-bold text-gray-700 mb-1">{day.conversations}</span>
                   <div 
-                    className="w-full rounded-lg overflow-hidden flex flex-col-reverse"
-                    style={{ height: `${Math.max(height, 5)}%`, minHeight: '8px' }}
-                  >
-                    <div 
-                      className="w-full bg-gradient-to-t from-blue-400 to-blue-500"
-                      style={{ height: `${inboundHeight}%` }}
-                      title={`Entrantes: ${day.inbound}`}
-                    />
-                    <div 
-                      className="w-full bg-gradient-to-t from-[var(--sage)] to-emerald-400"
-                      style={{ height: `${100 - inboundHeight}%` }}
-                      title={`Salientes: ${day.outbound}`}
-                    />
-                  </div>
+                    className="w-full bg-gradient-to-t from-[var(--sage)] to-emerald-400 rounded-lg transition-all"
+                    style={{ height: `${Math.max(height, 8)}%`, minHeight: '12px' }}
+                  />
                   <span className="text-xs text-gray-500 mt-2">{day.label}</span>
                 </div>
               )
             })}
-          </div>
-          <div className="flex justify-center gap-6 mt-4 pt-3 border-t border-gray-100">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded bg-blue-500"></div>
-              <span className="text-xs text-gray-500">Entrantes</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded bg-[var(--sage)]"></div>
-              <span className="text-xs text-gray-500">Salientes</span>
-            </div>
           </div>
         </div>
       )}
