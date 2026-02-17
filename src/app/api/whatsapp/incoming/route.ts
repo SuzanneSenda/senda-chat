@@ -49,6 +49,8 @@ async function isWhatsAppEnabled(): Promise<boolean> {
 // Emergency contacts for failed filter
 const EMERGENCY_MESSAGE = `Gracias por comunicarte. 💙
 
+Por el momento todos nuestros voluntarios están ocupados.
+
 Si estás pasando por un momento difícil y necesitas apoyo inmediato, aquí hay recursos que pueden ayudarte:
 
 📞 SAPTEL (24/7): 55 5259 8121
@@ -446,9 +448,9 @@ async function sendNotifications(
   let body: string;
   
   if (messageInfo.isAssigned) {
-    // Assigned conversation - show message preview
-    title = `💬 ${messageInfo.senderName}`;
-    body = messageInfo.messagePreview || 'Nuevo mensaje';
+    // Assigned conversation - show anonymous message preview (protect user privacy)
+    title = `💬 Nuevo mensaje`;
+    body = 'Tienes un nuevo mensaje en tu conversación asignada';
   } else {
     // New conversation waiting for volunteer
     title = `${crisisEmoji} Nuevo mensaje en Senda Chat`;
@@ -488,7 +490,7 @@ async function sendNotifications(
     if (volunteer.phone) {
       try {
         const whatsappMsg = messageInfo.isAssigned
-          ? `💬 *${messageInfo.senderName}*\n${messageInfo.messagePreview}\n\n👉 https://senda-chat.vercel.app/voluntarios/conversaciones`
+          ? `💬 *Nuevo mensaje en tu conversación*\n\nTienes un nuevo mensaje en Senda Chat.\n\n👉 https://senda-chat.vercel.app/voluntarios/conversaciones`
           : `${crisisEmoji} *Nueva conversación en Senda Chat*\n\nNivel de crisis: ${messageInfo.crisisLevel || 'No especificado'}\n\n👉 Entra para responder:\nhttps://senda-chat.vercel.app/voluntarios/conversaciones`;
         
         await sendWhatsAppNotification(volunteer.phone, whatsappMsg);

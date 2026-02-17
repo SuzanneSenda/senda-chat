@@ -414,8 +414,8 @@ export default function ConversacionesPage() {
                 </p>
               </div>
               
-              {/* Action buttons */}
-              <div className="flex gap-2">
+              {/* Action buttons - Desktop only (mobile buttons at bottom) */}
+              <div className="hidden md:flex gap-2">
                 {canTakeConversation && (
                   <button
                     onClick={() => handleTakeConversation(selectedPhone)}
@@ -449,8 +449,42 @@ export default function ConversacionesPage() {
               </div>
             </div>
 
+            {/* Mobile Action Bar - Fixed at bottom for Safari compatibility */}
+            <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-[var(--border)] p-3 flex justify-center gap-3 z-20 shadow-lg safe-area-pb">
+              {canTakeConversation && (
+                <button
+                  onClick={() => handleTakeConversation(selectedPhone)}
+                  disabled={taking}
+                  className="flex-1 max-w-[140px] py-3 text-sm bg-[var(--sage)] text-white rounded-xl hover:bg-[var(--sage)]/90 transition-colors flex items-center justify-center gap-2 font-medium shadow-md"
+                >
+                  {taking ? '...' : '✋ Tomar'}
+                </button>
+              )}
+              
+              {userRole === 'supervisor' && selectedConversation.conversation_state === 'assigned' && (
+                <button
+                  onClick={() => {
+                    fetchVolunteers();
+                    setShowTransferModal(true);
+                  }}
+                  className="flex-1 max-w-[140px] py-3 text-sm bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors flex items-center justify-center gap-2 font-medium shadow-md"
+                >
+                  🔄 Transferir
+                </button>
+              )}
+              
+              {(isAssignedToMe || userRole === 'supervisor') && (
+                <button
+                  onClick={() => handleCloseConversation(selectedPhone)}
+                  className="flex-1 max-w-[140px] py-3 text-sm bg-red-500 text-white rounded-xl hover:bg-red-600 transition-colors flex items-center justify-center gap-2 font-medium shadow-md"
+                >
+                  ✓ Cerrar
+                </button>
+              )}
+            </div>
+
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-2">
+            <div className="flex-1 overflow-y-auto p-4 space-y-2 pb-20 md:pb-4">
               {messages.map((msg) => (
                 <div
                   key={msg.id}
@@ -582,7 +616,7 @@ export default function ConversacionesPage() {
 
             {/* Message Input - Only show if assigned to me or supervisor */}
             {(isAssignedToMe || userRole === 'supervisor' || canTakeConversation) && (
-              <form onSubmit={sendMessage} className="p-4 bg-white border-t border-[var(--border)]">
+              <form onSubmit={sendMessage} className="p-4 bg-white border-t border-[var(--border)] mb-[70px] md:mb-0">
                 {canTakeConversation && !isAssignedToMe && (
                   <p className="text-xs text-center text-amber-600 mb-2">
                     Toma la conversación para responder
