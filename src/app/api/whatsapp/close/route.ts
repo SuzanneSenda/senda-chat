@@ -74,18 +74,63 @@ export async function POST(request: NextRequest) {
       console.error('Failed to send survey:', e);
     }
 
+    // Get conversation data BEFORE closing (for stats)
+    const { data: conversation } = await supabaseAdmin
+      .from('whatsapp_conversations')
+      .select('*')
+      .eq('phone_number', cleanPhone)
+      .single();
+
+    const closedAt = new Date().toISOString();
+
     // Update conversation state to pending_delete
     const { error: updateError } = await supabaseAdmin
       .from('whatsapp_conversations')
       .update({
         conversation_state: 'pending_delete',
         status: 'closed',
-        closed_at: new Date().toISOString(),
+        closed_at: closedAt,
       })
       .eq('phone_number', cleanPhone);
 
     if (updateError) {
       console.error('Error updating conversation:', updateError);
+    }
+
+    // Save stats IMMEDIATELY when closing (don't wait for survey response)
+    if (conversation) {
+      const createdAt = new Date(conversation.created_at);
+      const closedDate = new Date(closedAt);
+      const durationMinutes = Math.round((closedDate.getTime() - createdAt.getTime()) / (1000 * 60));
+
+      // Get volunteer name if assigned
+      let volunteerName: string | null = null;
+      if (conversation.assigned_to) {
+        const { data: volunteer } = await supabaseAdmin
+          .from('profiles')
+          .select('full_name')
+          .eq('id', conversation.assigned_to)
+          .single();
+        volunteerName = volunteer?.full_name || null;
+      }
+
+      // Save stats (rating will be updated if user responds to survey)
+      const { error: statsError } = await supabaseAdmin
+        .from('conversation_stats')
+        .insert({
+          volunteer_id: conversation.assigned_to,
+          volunteer_name: volunteerName,
+          crisis_level: conversation.crisis_level,
+          rating: null, // Will be updated when user responds to survey
+          duration_minutes: durationMinutes,
+          closed_at: closedAt,
+        });
+
+      if (statsError) {
+        console.error('❌ Error saving conversation stats:', statsError);
+      } else {
+        console.log(`📊 Stats saved: volunteer=${volunteerName}, crisis=${conversation.crisis_level}, duration=${durationMinutes}min`);
+      }
     }
 
     // Note: Deletion is handled by /api/whatsapp/cleanup cron job

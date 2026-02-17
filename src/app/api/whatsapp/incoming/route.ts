@@ -319,16 +319,29 @@ export async function POST(request: NextRequest) {
       }
 
     } else if (existingConv.conversation_state === 'pending_delete') {
-      // Handle survey response (existing logic)
+      // Handle survey response - UPDATE existing stats record
       const closedAt = new Date(existingConv.closed_at);
-      const createdAt = new Date(existingConv.created_at);
       const now = new Date();
       const secondsSinceClosed = (now.getTime() - closedAt.getTime()) / 1000;
       const isSurveyResponse = /^[1-5]$/.test(trimmedBody);
       
-      let rating: number | null = null;
-      if (secondsSinceClosed <= 60 && isSurveyResponse) {
-        rating = parseInt(trimmedBody);
+      if (secondsSinceClosed <= 120 && isSurveyResponse) {
+        // Valid survey response within 2 minutes
+        const rating = parseInt(trimmedBody);
+        
+        // Update existing stats record with rating (match by closed_at timestamp)
+        const { error: updateError } = await supabaseAdmin
+          .from('conversation_stats')
+          .update({ rating })
+          .eq('closed_at', existingConv.closed_at);
+        
+        if (updateError) {
+          console.error('❌ Error updating rating:', updateError);
+        } else {
+          console.log(`📊 Rating updated: ${rating}/5`);
+        }
+        
+        // Store survey response message
         await supabaseAdmin
           .from('whatsapp_messages')
           .insert({
@@ -339,42 +352,9 @@ export async function POST(request: NextRequest) {
             direction: 'inbound',
             status: 'survey_response'
           });
-        console.log(`📊 Survey response saved: ${trimmedBody}`);
       }
       
-      // Calculate duration in minutes
-      const durationMinutes = Math.round((closedAt.getTime() - createdAt.getTime()) / (1000 * 60));
-      
-      // Get volunteer name if assigned
-      let volunteerName: string | null = null;
-      if (existingConv.assigned_to) {
-        const { data: volunteer } = await supabaseAdmin
-          .from('profiles')
-          .select('full_name')
-          .eq('id', existingConv.assigned_to)
-          .single();
-        volunteerName = volunteer?.full_name || null;
-      }
-      
-      // Save stats BEFORE deleting
-      const { error: statsError } = await supabaseAdmin
-        .from('conversation_stats')
-        .insert({
-          volunteer_id: existingConv.assigned_to,
-          volunteer_name: volunteerName,
-          crisis_level: existingConv.crisis_level,
-          rating: rating,
-          duration_minutes: durationMinutes,
-          closed_at: existingConv.closed_at
-        });
-      
-      if (statsError) {
-        console.error('❌ Error saving conversation stats:', statsError);
-      } else {
-        console.log(`📊 Stats saved: volunteer=${volunteerName}, crisis=${existingConv.crisis_level}, rating=${rating}, duration=${durationMinutes}min`);
-      }
-      
-      // Delete conversation
+      // Delete conversation data (stats already saved at close time)
       await supabaseAdmin.from('whatsapp_messages').delete()
         .eq('phone_number', phoneNumber).neq('status', 'survey_response');
       await supabaseAdmin.from('whatsapp_conversations').delete().eq('phone_number', phoneNumber);
