@@ -143,6 +143,78 @@ export async function GET(request: NextRequest) {
     const { data: oldestMsg } = await oldestQuery as { data: { created_at: string }[] | null };
     const dataStartDate = oldestMsg?.[0]?.created_at || null;
 
+    // Get volunteer stats (conversations and ratings per volunteer)
+    let volunteerMsgsQuery = supabase
+      .from('whatsapp_messages')
+      .select('volunteer_id, phone_number')
+      .eq('direction', 'outbound')
+      .not('volunteer_id', 'is', null);
+    
+    if (dateFilter) {
+      volunteerMsgsQuery = volunteerMsgsQuery.gte('created_at', dateFilter);
+    }
+    
+    const { data: volunteerMsgs } = await volunteerMsgsQuery as { data: { volunteer_id: string; phone_number: string }[] | null };
+
+    // Get volunteer profiles
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, full_name')
+      .in('role', ['voluntario', 'admin', 'supervisor']) as { data: { id: string; full_name: string }[] | null };
+
+    const profileMap = new Map(profiles?.map(p => [p.id, p.full_name]) || []);
+
+    // Count conversations per volunteer
+    const volunteerConvs: { [key: string]: Set<string> } = {};
+    if (volunteerMsgs) {
+      for (const msg of volunteerMsgs) {
+        if (!volunteerConvs[msg.volunteer_id]) {
+          volunteerConvs[msg.volunteer_id] = new Set();
+        }
+        volunteerConvs[msg.volunteer_id].add(msg.phone_number);
+      }
+    }
+
+    const volunteerStats = Object.entries(volunteerConvs).map(([id, phones]) => ({
+      id,
+      name: profileMap.get(id) || 'Desconocido',
+      conversations: phones.size
+    })).sort((a, b) => b.conversations - a.conversations);
+
+    // Calculate average conversation duration (time from first to last message per phone)
+    let allMsgsQuery = supabase
+      .from('whatsapp_messages')
+      .select('phone_number, created_at')
+      .order('created_at', { ascending: true });
+    
+    if (dateFilter) {
+      allMsgsQuery = allMsgsQuery.gte('created_at', dateFilter);
+    }
+    
+    const { data: allMsgs } = await allMsgsQuery as { data: { phone_number: string; created_at: string }[] | null };
+    
+    const convDurations: number[] = [];
+    if (allMsgs) {
+      const byPhone: { [key: string]: string[] } = {};
+      for (const msg of allMsgs) {
+        if (!byPhone[msg.phone_number]) byPhone[msg.phone_number] = [];
+        byPhone[msg.phone_number].push(msg.created_at);
+      }
+      
+      for (const times of Object.values(byPhone)) {
+        if (times.length >= 2) {
+          const first = new Date(times[0]).getTime();
+          const last = new Date(times[times.length - 1]).getTime();
+          const durationMin = (last - first) / (1000 * 60);
+          if (durationMin > 0) convDurations.push(durationMin);
+        }
+      }
+    }
+    
+    const avgDurationMin = convDurations.length > 0 
+      ? Math.round(convDurations.reduce((a, b) => a + b, 0) / convDurations.length)
+      : null;
+
     return NextResponse.json({
       totalConversations,
       closedConversations,
@@ -151,6 +223,8 @@ export async function GET(request: NextRequest) {
       scoreDistribution,
       dailyStats,
       dataStartDate,
+      volunteerStats,
+      avgDurationMin,
       periodLabel: period === 'week' ? 'Esta semana' : period === 'month' ? 'Este mes' : 'Todo el tiempo',
       responseRate: closedConversations > 0 
         ? ((surveyResponses / closedConversations) * 100).toFixed(0) 

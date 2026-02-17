@@ -352,10 +352,15 @@ function StatsDashboard() {
       ['Respuestas a encuesta', stats.surveyResponses || 0],
       ['Calificación promedio', stats.averageScore || '-'],
       ['Tasa de respuesta', `${stats.responseRate || 0}%`],
+      ['Duración promedio (min)', stats.avgDurationMin || '-'],
       [''],
       ['Distribución de calificaciones'],
       ['Calificación', 'Cantidad'],
-      ...(stats.scoreDistribution || []).map((s: any) => [s.score, s.count])
+      ...(stats.scoreDistribution || []).map((s: any) => [s.score, s.count]),
+      [''],
+      ['Conversaciones por voluntario'],
+      ['Voluntario', 'Conversaciones'],
+      ...(stats.volunteerStats || []).map((v: any) => [v.name, v.conversations])
     ]
     
     const csv = rows.map(row => row.join(',')).join('\n')
@@ -529,6 +534,51 @@ function StatsDashboard() {
           </div>
         </div>
       )}
+
+      {/* Volunteer Stats & Duration */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        {/* Conversations per Volunteer */}
+        <div className="bg-white p-5 rounded-xl border border-gray-200">
+          <p className="text-sm font-semibold text-gray-800 mb-4">Conversaciones por voluntario</p>
+          {stats.volunteerStats && stats.volunteerStats.length > 0 ? (
+            <div className="space-y-3">
+              {stats.volunteerStats.slice(0, 5).map((vol: { id: string; name: string; conversations: number }, idx: number) => (
+                <div key={vol.id} className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                      idx === 0 ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-600'
+                    }`}>
+                      {idx + 1}
+                    </span>
+                    <span className="text-sm text-gray-700">{vol.name}</span>
+                  </div>
+                  <span className="text-sm font-semibold text-[var(--sage)]">{vol.conversations}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-400 italic">Sin datos de voluntarios</p>
+          )}
+        </div>
+
+        {/* Average Duration */}
+        <div className="bg-white p-5 rounded-xl border border-gray-200">
+          <p className="text-sm font-semibold text-gray-800 mb-4">Duración promedio de conversación</p>
+          <div className="flex items-center justify-center h-20">
+            {stats.avgDurationMin ? (
+              <div className="text-center">
+                <p className="text-4xl font-bold text-[var(--sage)]">{stats.avgDurationMin}</p>
+                <p className="text-sm text-gray-500">minutos</p>
+              </div>
+            ) : (
+              <p className="text-sm text-gray-400 italic">Sin datos suficientes</p>
+            )}
+          </div>
+          <p className="text-xs text-gray-400 text-center mt-2">
+            Tiempo desde el primer al último mensaje
+          </p>
+        </div>
+      </div>
 
       {/* Daily Messages Chart */}
       {stats.dailyStats && stats.dailyStats.length > 0 && (
