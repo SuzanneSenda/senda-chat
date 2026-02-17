@@ -424,7 +424,11 @@ function StatsDashboard() {
       [''],
       ['Conversaciones por voluntario'],
       ['Voluntario', 'Conversaciones'],
-      ...(stats.volunteerStats || []).map((v: any) => [v.name, v.conversations])
+      ...(stats.volunteerStats || []).map((v: any) => [v.name, v.conversations]),
+      [''],
+      ['Calificación por voluntario'],
+      ['Voluntario', 'Calificación promedio', 'Total calificaciones'],
+      ...(stats.volunteerRatingStats || []).map((v: any) => [v.name, v.avgRating, v.totalRatings])
     ]
     
     const csv = rows.map(row => row.join(',')).join('\n')
@@ -629,6 +633,40 @@ function StatsDashboard() {
       {/* Conversations per Volunteer - Horizontal Bar Chart (Expandable) */}
       {stats.volunteerStats && stats.volunteerStats.length > 0 && (
         <VolunteerChart volunteerStats={stats.volunteerStats} />
+      )}
+
+      {/* Rating per Volunteer */}
+      {stats.volunteerRatingStats && stats.volunteerRatingStats.length > 0 && (
+        <div className="bg-white p-5 rounded-xl border border-gray-200 mb-6">
+          <p className="text-sm font-semibold text-gray-800 mb-4">⭐ Calificación por voluntario</p>
+          <div className="space-y-3">
+            {stats.volunteerRatingStats.map((vol: { id: string; name: string; avgRating: string; totalRatings: number }) => {
+              const rating = parseFloat(vol.avgRating)
+              const width = (rating / 5) * 100
+              const getColor = (r: number) => {
+                if (r >= 4.5) return 'from-green-400 to-emerald-500'
+                if (r >= 3.5) return 'from-lime-400 to-green-500'
+                if (r >= 2.5) return 'from-yellow-400 to-amber-500'
+                if (r >= 1.5) return 'from-orange-400 to-orange-500'
+                return 'from-red-400 to-red-500'
+              }
+              return (
+                <div key={vol.id} className="flex items-center gap-3">
+                  <span className="w-28 text-sm text-gray-600 truncate" title={vol.name}>{vol.name || 'Voluntario'}</span>
+                  <div className="flex-1 bg-gray-100 rounded-full h-7 overflow-hidden">
+                    <div 
+                      className={`h-full bg-gradient-to-r ${getColor(rating)} rounded-full flex items-center justify-end pr-3 transition-all`}
+                      style={{ width: `${Math.max(width, 20)}%` }}
+                    >
+                      <span className="text-xs font-bold text-white drop-shadow">⭐ {vol.avgRating}</span>
+                    </div>
+                  </div>
+                  <span className="text-xs text-gray-400 w-16">({vol.totalRatings} calif.)</span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
       )}
 
       {/* Daily Messages Chart */}

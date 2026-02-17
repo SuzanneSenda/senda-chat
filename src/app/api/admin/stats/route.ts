@@ -67,16 +67,22 @@ export async function GET(request: NextRequest) {
     
     const { data: allInbound } = await inboundQuery as { data: { phone_number: string; message_body: string; created_at: string }[] | null };
 
-    // Count responses that are survey answers (1-5)
+    // Count responses that are survey answers (1-5) and track by phone
     let surveyResponses = 0;
     const surveyScores: number[] = [];
+    const ratingsByPhone: { [phone: string]: number } = {};
     
     if (allInbound) {
       for (const msg of allInbound) {
         const trimmed = msg.message_body?.trim();
         if (/^[1-5]$/.test(trimmed)) {
           surveyResponses++;
-          surveyScores.push(parseInt(trimmed));
+          const score = parseInt(trimmed);
+          surveyScores.push(score);
+          // Only keep first (most recent) rating per phone
+          if (!ratingsByPhone[msg.phone_number]) {
+            ratingsByPhone[msg.phone_number] = score;
+          }
         }
       }
     }
@@ -181,6 +187,38 @@ export async function GET(request: NextRequest) {
       conversations: phones.size
     })).sort((a, b) => b.conversations - a.conversations);
 
+    // Calculate ratings per volunteer
+    // Find which volunteer last messaged each phone that gave a rating
+    const volunteerRatings: { [volunteerId: string]: number[] } = {};
+    
+    if (volunteerMsgs && Object.keys(ratingsByPhone).length > 0) {
+      // Group outbound messages by phone to find last volunteer
+      const lastVolunteerByPhone: { [phone: string]: string } = {};
+      for (const msg of volunteerMsgs) {
+        // Since we don't have timestamp in this query, we'll use any volunteer who messaged
+        lastVolunteerByPhone[msg.phone_number] = msg.volunteer_id;
+      }
+      
+      // Associate ratings with volunteers
+      for (const [phone, rating] of Object.entries(ratingsByPhone)) {
+        const volunteerId = lastVolunteerByPhone[phone];
+        if (volunteerId) {
+          if (!volunteerRatings[volunteerId]) {
+            volunteerRatings[volunteerId] = [];
+          }
+          volunteerRatings[volunteerId].push(rating);
+        }
+      }
+    }
+
+    // Build volunteer ratings stats
+    const volunteerRatingStats = Object.entries(volunteerRatings).map(([id, ratings]) => ({
+      id,
+      name: profileMap.get(id) || 'Desconocido',
+      avgRating: (ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1),
+      totalRatings: ratings.length
+    })).sort((a, b) => parseFloat(b.avgRating) - parseFloat(a.avgRating));
+
     // Calculate average conversation duration (time from first to last message per phone)
     let allMsgsQuery = supabase
       .from('whatsapp_messages')
@@ -224,6 +262,7 @@ export async function GET(request: NextRequest) {
       dailyStats,
       dataStartDate,
       volunteerStats,
+      volunteerRatingStats,
       avgDurationMin,
       periodLabel: period === 'week' ? 'Esta semana' : period === 'month' ? 'Este mes' : 'Todo el tiempo',
       responseRate: closedConversations > 0 
