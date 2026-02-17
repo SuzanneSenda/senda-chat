@@ -463,25 +463,39 @@ function StatsDashboard() {
 
       {/* Score Distribution */}
       {stats.scoreDistribution && stats.surveyResponses > 0 && (
-        <div className="bg-white p-4 rounded-xl border border-gray-200 mb-6">
-          <p className="text-sm font-medium text-gray-700 mb-3">Distribución de calificaciones</p>
-          <div className="flex items-end gap-2 h-24">
+        <div className="bg-white p-5 rounded-xl border border-gray-200 mb-6">
+          <p className="text-sm font-semibold text-gray-800 mb-4">Distribución de calificaciones</p>
+          <div className="flex items-end gap-3 h-32">
             {stats.scoreDistribution.map((item: { score: number; count: number }) => {
               const maxCount = Math.max(...stats.scoreDistribution.map((s: any) => s.count), 1)
               const height = (item.count / maxCount) * 100
+              const colors = [
+                'from-red-400 to-red-500',
+                'from-orange-400 to-orange-500', 
+                'from-yellow-400 to-yellow-500',
+                'from-lime-400 to-lime-500',
+                'from-green-400 to-green-500'
+              ]
+              const emojis = ['😔', '😕', '😐', '🙂', '😊']
               return (
                 <div key={item.score} className="flex-1 flex flex-col items-center">
-                  <span className="text-xs text-gray-500 mb-1">{item.count}</span>
+                  <span className="text-sm font-bold text-gray-700 mb-1">{item.count}</span>
                   <div 
-                    className="w-full bg-[var(--sage)] rounded-t transition-all"
-                    style={{ height: `${Math.max(height, 5)}%` }}
+                    className={`w-full bg-gradient-to-t ${colors[item.score - 1]} rounded-lg shadow-sm transition-all`}
+                    style={{ height: `${Math.max(height, 8)}%`, minHeight: '12px' }}
                   />
-                  <span className="text-xs font-medium text-gray-700 mt-1">{item.score}</span>
+                  <div className="mt-2 text-center">
+                    <span className="text-lg">{emojis[item.score - 1]}</span>
+                    <p className="text-xs font-medium text-gray-600">{item.score}</p>
+                  </div>
                 </div>
               )
             })}
           </div>
-          <p className="text-xs text-gray-400 text-center mt-2">1 = No me ayudó → 5 = Me ayudó mucho</p>
+          <div className="flex justify-between mt-3 pt-3 border-t border-gray-100">
+            <span className="text-xs text-gray-400">😔 No me ayudó</span>
+            <span className="text-xs text-gray-400">Me ayudó mucho 😊</span>
+          </div>
         </div>
       )}
 
