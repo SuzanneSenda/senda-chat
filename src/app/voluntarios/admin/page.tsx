@@ -600,12 +600,17 @@ function StatsDashboard() {
       )}
 
       {/* Conversations per Volunteer - Horizontal Bar Chart (Expandable) */}
-      {stats.volunteerStats && stats.volunteerStats.length > 0 && (
+      {stats.volunteerStats && stats.volunteerStats.length > 0 ? (
         <VolunteerChart volunteerStats={stats.volunteerStats} />
+      ) : (
+        <div className="bg-white p-5 rounded-xl border border-gray-200 mb-6">
+          <p className="text-sm font-semibold text-gray-800 mb-4">📊 Conversaciones por voluntario</p>
+          <p className="text-sm text-gray-400 italic text-center py-8">Sin datos de voluntarios aún</p>
+        </div>
       )}
 
       {/* Rating per Volunteer */}
-      {stats.volunteerRatingStats && stats.volunteerRatingStats.length > 0 && (
+      {stats.volunteerRatingStats && stats.volunteerRatingStats.length > 0 ? (
         <div className="bg-white p-5 rounded-xl border border-gray-200 mb-6">
           <p className="text-sm font-semibold text-gray-800 mb-4">⭐ Calificación por voluntario</p>
           <div className="space-y-3">
@@ -636,6 +641,11 @@ function StatsDashboard() {
             })}
           </div>
         </div>
+      ) : (
+        <div className="bg-white p-5 rounded-xl border border-gray-200 mb-6">
+          <p className="text-sm font-semibold text-gray-800 mb-4">⭐ Calificación por voluntario</p>
+          <p className="text-sm text-gray-400 italic text-center py-8">Sin calificaciones aún</p>
+        </div>
       )}
 
       {/* Daily Conversations Chart */}
@@ -662,7 +672,7 @@ function StatsDashboard() {
       )}
 
       {/* Hourly Conversations Chart */}
-      {stats.hourlyStats && stats.hourlyStats.some((h: any) => h.conversations > 0) && (
+      {stats.hourlyStats && stats.hourlyStats.some((h: any) => h.conversations > 0) ? (
         <div className="bg-white p-5 rounded-xl border border-gray-200">
           <p className="text-sm font-semibold text-gray-800 mb-4">🕐 Conversaciones por horario</p>
           <div className="flex items-end gap-1 h-32">
@@ -694,6 +704,11 @@ function StatsDashboard() {
             <span>☀️ Tarde</span>
             <span>🌆 Noche</span>
           </div>
+        </div>
+      ) : (
+        <div className="bg-white p-5 rounded-xl border border-gray-200">
+          <p className="text-sm font-semibold text-gray-800 mb-4">🕐 Conversaciones por horario</p>
+          <p className="text-sm text-gray-400 italic text-center py-8">Sin datos de horarios aún</p>
         </div>
       )}
     </div>
