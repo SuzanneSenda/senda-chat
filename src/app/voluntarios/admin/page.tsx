@@ -252,7 +252,7 @@ function ResetDataSection() {
             onClick={() => setShowModal(true)}
             className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
           >
-            Eliminar Datos
+            Eliminar datos
           </button>
         </div>
       </div>
@@ -310,7 +310,7 @@ function ResetDataSection() {
                     : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                 }`}
               >
-                {loading ? 'Eliminando...' : 'Eliminar Todo'}
+                {loading ? 'Eliminando...' : 'Eliminar todo'}
               </button>
             </div>
           </div>
