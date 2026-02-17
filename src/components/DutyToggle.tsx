@@ -4,16 +4,23 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth/context';
 
 export function DutyToggle() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [isOnDuty, setIsOnDuty] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [fetchingDuty, setFetchingDuty] = useState(false);
+  const [hasFetched, setHasFetched] = useState(false);
   const [updating, setUpdating] = useState(false);
 
-  // Fetch current duty status
+  // Fetch current duty status once auth is ready
   useEffect(() => {
     async function fetchDutyStatus() {
-      if (!user?.id) return;
+      if (authLoading) return; // Wait for auth
+      if (!user?.id) {
+        setHasFetched(true); // No user, nothing to fetch
+        return;
+      }
+      if (hasFetched) return; // Already fetched
       
+      setFetchingDuty(true);
       try {
         const res = await fetch('/api/duty/status');
         const data = await res.json();
@@ -21,12 +28,16 @@ export function DutyToggle() {
       } catch (error) {
         console.error('Error fetching duty status:', error);
       } finally {
-        setLoading(false);
+        setFetchingDuty(false);
+        setHasFetched(true);
       }
     }
 
     fetchDutyStatus();
-  }, [user?.id]);
+  }, [user?.id, authLoading, hasFetched]);
+
+  // Show loading only while auth is loading OR while fetching duty status
+  const loading = authLoading || (user?.id && !hasFetched);
 
   const toggleDuty = async () => {
     if (updating) return;
