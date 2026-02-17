@@ -129,6 +129,20 @@ export async function GET(request: NextRequest) {
       ...counts
     }));
 
+    // Get oldest message date for "desde" display
+    let oldestQuery = supabase
+      .from('whatsapp_messages')
+      .select('created_at')
+      .order('created_at', { ascending: true })
+      .limit(1);
+    
+    if (dateFilter) {
+      oldestQuery = oldestQuery.gte('created_at', dateFilter);
+    }
+    
+    const { data: oldestMsg } = await oldestQuery as { data: { created_at: string }[] | null };
+    const dataStartDate = oldestMsg?.[0]?.created_at || null;
+
     return NextResponse.json({
       totalConversations,
       closedConversations,
@@ -136,6 +150,8 @@ export async function GET(request: NextRequest) {
       averageScore,
       scoreDistribution,
       dailyStats,
+      dataStartDate,
+      periodLabel: period === 'week' ? 'Esta semana' : period === 'month' ? 'Este mes' : 'Todo el tiempo',
       responseRate: closedConversations > 0 
         ? ((surveyResponses / closedConversations) * 100).toFixed(0) 
         : 0

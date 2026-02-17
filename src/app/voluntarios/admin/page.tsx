@@ -441,6 +441,24 @@ function StatsDashboard() {
         </div>
       </div>
       
+      {/* Date Range Indicator */}
+      {stats.dataStartDate && (
+        <div className="mb-4 flex items-center gap-2 text-sm text-gray-500">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          <span>
+            Datos desde: <strong className="text-gray-700">
+              {new Date(stats.dataStartDate).toLocaleDateString('es-MX', { 
+                day: 'numeric', 
+                month: 'short', 
+                year: 'numeric' 
+              })}
+            </strong>
+          </span>
+        </div>
+      )}
+
       {/* Main Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-white p-4 rounded-xl border border-gray-200">
@@ -501,13 +519,59 @@ function StatsDashboard() {
 
       {/* Response Rate */}
       {stats.closedConversations > 0 && (
-        <div className="bg-gradient-to-r from-[var(--sage)]/10 to-blue-50 p-4 rounded-xl border border-[var(--sage)]/20">
+        <div className="bg-gradient-to-r from-[var(--sage)]/10 to-blue-50 p-4 rounded-xl border border-[var(--sage)]/20 mb-6">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-700">Tasa de respuesta a encuesta</p>
               <p className="text-xs text-gray-500">Usuarios que respondieron después de cerrar</p>
             </div>
             <p className="text-2xl font-bold text-[var(--sage)]">{stats.responseRate}%</p>
+          </div>
+        </div>
+      )}
+
+      {/* Daily Messages Chart */}
+      {stats.dailyStats && stats.dailyStats.length > 0 && (
+        <div className="bg-white p-5 rounded-xl border border-gray-200">
+          <p className="text-sm font-semibold text-gray-800 mb-4">Mensajes por día (últimos 7 días)</p>
+          <div className="flex items-end gap-2 h-40">
+            {stats.dailyStats.map((day: { date: string; label: string; inbound: number; outbound: number }) => {
+              const total = day.inbound + day.outbound
+              const maxTotal = Math.max(...stats.dailyStats.map((d: any) => d.inbound + d.outbound), 1)
+              const height = (total / maxTotal) * 100
+              const inboundHeight = total > 0 ? (day.inbound / total) * 100 : 0
+              return (
+                <div key={day.date} className="flex-1 flex flex-col items-center">
+                  <span className="text-xs font-medium text-gray-600 mb-1">{total}</span>
+                  <div 
+                    className="w-full rounded-lg overflow-hidden flex flex-col-reverse"
+                    style={{ height: `${Math.max(height, 5)}%`, minHeight: '8px' }}
+                  >
+                    <div 
+                      className="w-full bg-gradient-to-t from-blue-400 to-blue-500"
+                      style={{ height: `${inboundHeight}%` }}
+                      title={`Entrantes: ${day.inbound}`}
+                    />
+                    <div 
+                      className="w-full bg-gradient-to-t from-[var(--sage)] to-emerald-400"
+                      style={{ height: `${100 - inboundHeight}%` }}
+                      title={`Salientes: ${day.outbound}`}
+                    />
+                  </div>
+                  <span className="text-xs text-gray-500 mt-2">{day.label}</span>
+                </div>
+              )
+            })}
+          </div>
+          <div className="flex justify-center gap-6 mt-4 pt-3 border-t border-gray-100">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded bg-blue-500"></div>
+              <span className="text-xs text-gray-500">Entrantes</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded bg-[var(--sage)]"></div>
+              <span className="text-xs text-gray-500">Salientes</span>
+            </div>
           </div>
         </div>
       )}
