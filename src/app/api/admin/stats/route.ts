@@ -1,37 +1,71 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const supabase = createAdminClient();
     if (!supabase) {
       return NextResponse.json({ error: 'Database not configured' }, { status: 500 });
     }
 
+    // Get period filter
+    const period = request.nextUrl.searchParams.get('period') || 'all';
+    
+    let dateFilter: string | null = null;
+    const now = new Date();
+    
+    if (period === 'week') {
+      const weekAgo = new Date(now);
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      dateFilter = weekAgo.toISOString();
+    } else if (period === 'month') {
+      const monthAgo = new Date(now);
+      monthAgo.setMonth(monthAgo.getMonth() - 1);
+      dateFilter = monthAgo.toISOString();
+    }
+
     // Get total conversations (unique phone numbers)
-    const { data: conversations } = await supabase
+    let conversationsQuery = supabase
       .from('whatsapp_messages')
       .select('phone_number')
-      .eq('direction', 'inbound') as { data: { phone_number: string }[] | null };
+      .eq('direction', 'inbound');
+    
+    if (dateFilter) {
+      conversationsQuery = conversationsQuery.gte('created_at', dateFilter);
+    }
+    
+    const { data: conversations } = await conversationsQuery as { data: { phone_number: string }[] | null };
 
     const uniqueConversations = new Set(conversations?.map(c => c.phone_number) || []);
     const totalConversations = uniqueConversations.size;
 
     // Get closed conversations (conversations that received the survey)
-    const { data: closedConvs } = await supabase
+    let closedQuery = supabase
       .from('whatsapp_messages')
       .select('phone_number')
       .eq('direction', 'outbound')
-      .ilike('message_body', '%escala del 1 al 5%') as { data: { phone_number: string }[] | null };
+      .ilike('message_body', '%escala del 1 al 5%');
+    
+    if (dateFilter) {
+      closedQuery = closedQuery.gte('created_at', dateFilter);
+    }
+    
+    const { data: closedConvs } = await closedQuery as { data: { phone_number: string }[] | null };
 
     const closedConversations = new Set(closedConvs?.map(c => c.phone_number) || []).size;
 
     // Get survey responses (messages that are just a number 1-5)
-    const { data: allInbound } = await supabase
+    let inboundQuery = supabase
       .from('whatsapp_messages')
       .select('phone_number, message_body, created_at')
       .eq('direction', 'inbound')
-      .order('created_at', { ascending: false }) as { data: { phone_number: string; message_body: string; created_at: string }[] | null };
+      .order('created_at', { ascending: false });
+    
+    if (dateFilter) {
+      inboundQuery = inboundQuery.gte('created_at', dateFilter);
+    }
+    
+    const { data: allInbound } = await inboundQuery as { data: { phone_number: string; message_body: string; created_at: string }[] | null };
 
     // Count responses that are survey answers (1-5)
     let surveyResponses = 0;

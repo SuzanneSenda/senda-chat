@@ -205,16 +205,49 @@ function ChannelManager() {
 function StatsDashboard() {
   const [stats, setStats] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [dateFilter, setDateFilter] = useState<'week' | 'month' | 'all'>('all')
 
-  useEffect(() => {
-    fetch('/api/admin/stats')
+  const fetchStats = (filter: string) => {
+    setLoading(true)
+    fetch(`/api/admin/stats?period=${filter}`)
       .then(res => res.json())
       .then(data => {
         setStats(data)
         setLoading(false)
       })
       .catch(() => setLoading(false))
-  }, [])
+  }
+
+  useEffect(() => {
+    fetchStats(dateFilter)
+  }, [dateFilter])
+
+  const exportCSV = () => {
+    if (!stats) return
+    
+    const rows = [
+      ['Métrica', 'Valor'],
+      ['Período', dateFilter === 'week' ? 'Esta semana' : dateFilter === 'month' ? 'Este mes' : 'Todo'],
+      ['Conversaciones totales', stats.totalConversations || 0],
+      ['Conversaciones cerradas', stats.closedConversations || 0],
+      ['Respuestas a encuesta', stats.surveyResponses || 0],
+      ['Calificación promedio', stats.averageScore || '-'],
+      ['Tasa de respuesta', `${stats.responseRate || 0}%`],
+      [''],
+      ['Distribución de calificaciones'],
+      ['Calificación', 'Cantidad'],
+      ...(stats.scoreDistribution || []).map((s: any) => [s.score, s.count])
+    ]
+    
+    const csv = rows.map(row => row.join(',')).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `estadisticas-senda-${new Date().toISOString().split('T')[0]}.csv`
+    link.click()
+    URL.revokeObjectURL(url)
+  }
 
   if (loading) {
     return (
@@ -238,7 +271,56 @@ function StatsDashboard() {
 
   return (
     <div className="mb-8">
-      <h2 className="text-lg font-semibold text-gray-800 mb-4">Estadísticas de conversaciones</h2>
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+        <h2 className="text-lg font-semibold text-gray-800">Estadísticas de conversaciones</h2>
+        
+        <div className="flex items-center gap-2">
+          {/* Date Filters */}
+          <div className="flex bg-gray-100 rounded-lg p-1">
+            <button
+              onClick={() => setDateFilter('week')}
+              className={`px-3 py-1 text-sm rounded-md transition-all ${
+                dateFilter === 'week' 
+                  ? 'bg-white text-[var(--sage)] shadow-sm font-medium' 
+                  : 'text-gray-600 hover:text-gray-800'
+              }`}
+            >
+              Esta semana
+            </button>
+            <button
+              onClick={() => setDateFilter('month')}
+              className={`px-3 py-1 text-sm rounded-md transition-all ${
+                dateFilter === 'month' 
+                  ? 'bg-white text-[var(--sage)] shadow-sm font-medium' 
+                  : 'text-gray-600 hover:text-gray-800'
+              }`}
+            >
+              Este mes
+            </button>
+            <button
+              onClick={() => setDateFilter('all')}
+              className={`px-3 py-1 text-sm rounded-md transition-all ${
+                dateFilter === 'all' 
+                  ? 'bg-white text-[var(--sage)] shadow-sm font-medium' 
+                  : 'text-gray-600 hover:text-gray-800'
+              }`}
+            >
+              Todo
+            </button>
+          </div>
+          
+          {/* Export Button */}
+          <button
+            onClick={exportCSV}
+            className="flex items-center gap-1 px-3 py-1.5 text-sm bg-[var(--sage)] text-white rounded-lg hover:bg-[var(--sage-dark)] transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Exportar CSV
+          </button>
+        </div>
+      </div>
       
       {/* Main Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
