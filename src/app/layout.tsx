@@ -19,6 +19,11 @@ export const metadata: Metadata = {
   title: "Senda Chat - Portal de Voluntarios",
   description: "Plataforma de recursos para voluntarios de Senda Chat",
   manifest: "/manifest.json",
+  icons: {
+    icon: "/favicon-orange.png",
+    shortcut: "/favicon-orange.png",
+    apple: "/favicon-orange.png",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
