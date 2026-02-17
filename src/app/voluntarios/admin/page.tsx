@@ -201,6 +201,70 @@ function ChannelManager() {
   );
 }
 
+// Volunteer Chart Component (Expandable)
+function VolunteerChart({ volunteerStats }: { volunteerStats: { id: string; name: string; conversations: number }[] }) {
+  const [expanded, setExpanded] = useState(false)
+  const displayStats = expanded ? volunteerStats : volunteerStats.slice(0, 5)
+  const maxConvs = Math.max(...volunteerStats.map((v: any) => v.conversations), 1)
+  const colors = ['from-[var(--sage)] to-emerald-400', 'from-blue-400 to-blue-500', 'from-purple-400 to-purple-500', 'from-pink-400 to-pink-500', 'from-orange-400 to-orange-500', 'from-teal-400 to-teal-500']
+
+  return (
+    <div className="bg-white p-5 rounded-xl border border-gray-200 mb-6">
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-sm font-semibold text-gray-800">📊 Conversaciones por voluntario</p>
+        {volunteerStats.length > 5 && (
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="text-xs text-[var(--sage)] hover:underline flex items-center gap-1"
+          >
+            {expanded ? (
+              <>
+                <span>Ver menos</span>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                </svg>
+              </>
+            ) : (
+              <>
+                <span>Ver todos ({volunteerStats.length})</span>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </>
+            )}
+          </button>
+        )}
+      </div>
+      <div className={`space-y-3 ${expanded ? 'max-h-96 overflow-y-auto pr-2' : ''}`}>
+        {displayStats.map((vol, idx) => {
+          const width = (vol.conversations / maxConvs) * 100
+          return (
+            <div key={vol.id} className="flex items-center gap-3">
+              <span className="w-28 text-sm text-gray-600 truncate" title={vol.name}>{vol.name || 'Voluntario'}</span>
+              <div className="flex-1 bg-gray-100 rounded-full h-7 overflow-hidden">
+                <div 
+                  className={`h-full bg-gradient-to-r ${colors[idx % colors.length]} rounded-full flex items-center justify-end pr-3 transition-all`}
+                  style={{ width: `${Math.max(width, 15)}%` }}
+                >
+                  <span className="text-xs font-bold text-white drop-shadow">{vol.conversations}</span>
+                </div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+      {!expanded && volunteerStats.length > 5 && (
+        <button
+          onClick={() => setExpanded(true)}
+          className="w-full mt-4 py-2 text-sm text-[var(--sage)] bg-[var(--sage)]/5 rounded-lg hover:bg-[var(--sage)]/10 transition-colors"
+        >
+          Ver todos los voluntarios ({volunteerStats.length})
+        </button>
+      )}
+    </div>
+  )
+}
+
 // Reset Data Component (Production Launch)
 function ResetDataSection() {
   const [showModal, setShowModal] = useState(false)
@@ -562,31 +626,9 @@ function StatsDashboard() {
         </div>
       </div>
 
-      {/* Conversations per Volunteer - Horizontal Bar Chart */}
+      {/* Conversations per Volunteer - Horizontal Bar Chart (Expandable) */}
       {stats.volunteerStats && stats.volunteerStats.length > 0 && (
-        <div className="bg-white p-5 rounded-xl border border-gray-200 mb-6">
-          <p className="text-sm font-semibold text-gray-800 mb-4">📊 Conversaciones por voluntario</p>
-          <div className="space-y-3">
-            {stats.volunteerStats.slice(0, 6).map((vol: { id: string; name: string; conversations: number }, idx: number) => {
-              const maxConvs = Math.max(...stats.volunteerStats.map((v: any) => v.conversations), 1)
-              const width = (vol.conversations / maxConvs) * 100
-              const colors = ['from-[var(--sage)] to-emerald-400', 'from-blue-400 to-blue-500', 'from-purple-400 to-purple-500', 'from-pink-400 to-pink-500', 'from-orange-400 to-orange-500', 'from-teal-400 to-teal-500']
-              return (
-                <div key={vol.id} className="flex items-center gap-3">
-                  <span className="w-24 text-sm text-gray-600 truncate">{vol.name?.split(' ')[0] || 'Vol'}</span>
-                  <div className="flex-1 bg-gray-100 rounded-full h-6 overflow-hidden">
-                    <div 
-                      className={`h-full bg-gradient-to-r ${colors[idx % colors.length]} rounded-full flex items-center justify-end pr-2 transition-all`}
-                      style={{ width: `${Math.max(width, 10)}%` }}
-                    >
-                      <span className="text-xs font-bold text-white">{vol.conversations}</span>
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
+        <VolunteerChart volunteerStats={stats.volunteerStats} />
       )}
 
       {/* Daily Messages Chart */}
