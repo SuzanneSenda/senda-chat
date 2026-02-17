@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
 
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
+    const adminClient = createAdminClient();
     
     // Verify user is authenticated
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -57,22 +58,24 @@ export async function POST(request: NextRequest) {
       }, { status: 500 });
     }
 
-    // Store outbound message in database
-    const { error: dbError } = await supabase
-      .from('whatsapp_messages')
-      .insert({
-        phone_number: to.replace('whatsapp:', ''),
-        sender_name: 'Senda Chat',
-        message_body: message,
-        twilio_sid: twilioData.sid,
-        direction: 'outbound',
-        status: 'sent',
-        volunteer_id: user.id,
-      });
+    // Store outbound message in database using admin client to bypass RLS
+    if (adminClient) {
+      const { error: dbError } = await (adminClient as any)
+        .from('whatsapp_messages')
+        .insert({
+          phone_number: to.replace('whatsapp:', ''),
+          sender_name: 'Senda Chat',
+          message_body: message,
+          twilio_sid: twilioData.sid,
+          direction: 'outbound',
+          status: 'sent',
+          volunteer_id: user.id,
+        });
 
-    if (dbError) {
-      console.error('Error storing message:', dbError);
-      // Don't fail - message was sent
+      if (dbError) {
+        console.error('Error storing message:', dbError);
+        // Don't fail - message was sent
+      }
     }
 
     return NextResponse.json({ 
