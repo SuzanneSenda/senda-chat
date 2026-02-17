@@ -127,7 +127,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe()
   }, [])
 
-  const fetchProfile = async (userId: string, retryCount = 0) => {
+  const fetchProfile = async (userId: string, retryCount = 0): Promise<void> => {
     if (!supabase) {
       console.log('fetchProfile: supabase client is null')
       return
@@ -147,10 +147,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) {
         console.error('Error fetching profile:', error)
-        // Retry up to 2 times
+        // Retry up to 2 times with await
         if (retryCount < 2) {
-          console.log('Retrying fetchProfile in 1 second...')
-          setTimeout(() => fetchProfile(userId, retryCount + 1), 1000)
+          console.log('Retrying fetchProfile in 500ms...')
+          await new Promise(resolve => setTimeout(resolve, 500))
+          return fetchProfile(userId, retryCount + 1)
         }
         return
       }
@@ -174,18 +175,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.log('fetchProfile: profile updated from server, role:', data.role)
       } else {
         console.log('fetchProfile: no profile found for user')
-        // Retry if no data
+        // Retry if no data with await
         if (retryCount < 2) {
-          console.log('Retrying fetchProfile in 1 second...')
-          setTimeout(() => fetchProfile(userId, retryCount + 1), 1000)
+          console.log('Retrying fetchProfile in 500ms...')
+          await new Promise(resolve => setTimeout(resolve, 500))
+          return fetchProfile(userId, retryCount + 1)
         }
       }
     } catch (err) {
       console.error('Exception fetching profile:', err)
-      // Retry on exception
+      // Retry on exception with await
       if (retryCount < 2) {
-        console.log('Retrying fetchProfile in 1 second...')
-        setTimeout(() => fetchProfile(userId, retryCount + 1), 1000)
+        console.log('Retrying fetchProfile in 500ms...')
+        await new Promise(resolve => setTimeout(resolve, 500))
+        return fetchProfile(userId, retryCount + 1)
       }
     }
   }
