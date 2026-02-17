@@ -596,7 +596,7 @@ function StatsDashboard() {
           <div className="flex items-end gap-3 h-32">
             {stats.scoreDistribution.map((item) => {
               const maxCount = Math.max(...stats.scoreDistribution.map((s) => s.count), 1)
-              const height = (item.count / maxCount) * 100
+              const heightPercent = item.count > 0 ? Math.max((item.count / maxCount) * 100, 15) : 2
               const colors = [
                 'from-red-400 to-red-500',
                 'from-orange-400 to-orange-500', 
@@ -610,7 +610,7 @@ function StatsDashboard() {
                   <span className="text-sm font-bold text-gray-700 mb-1">{item.count}</span>
                   <div 
                     className={`w-full bg-gradient-to-t ${colors[item.score - 1]} rounded-lg shadow-sm transition-all`}
-                    style={{ height: `${Math.max(height, 8)}%`, minHeight: '12px' }}
+                    style={{ height: `${heightPercent}%` }}
                   />
                   <div className="mt-2 text-center">
                     <span className="text-lg">{emojis[item.score - 1]}</span>
@@ -696,13 +696,13 @@ function StatsDashboard() {
           <div className="flex items-end gap-3 h-40">
             {stats.dailyStats.map((day) => {
               const maxConvs = Math.max(...stats.dailyStats.map((d) => d.conversations), 1)
-              const height = (day.conversations / maxConvs) * 100
+              const heightPercent = day.conversations > 0 ? Math.max((day.conversations / maxConvs) * 100, 15) : 2
               return (
                 <div key={day.date} className="flex-1 flex flex-col items-center">
                   <span className="text-sm font-bold text-gray-700 mb-1">{day.conversations}</span>
                   <div 
                     className="w-full bg-gradient-to-t from-[var(--sage)] to-emerald-400 rounded-lg transition-all"
-                    style={{ height: `${Math.max(height, 8)}%`, minHeight: '12px' }}
+                    style={{ height: `${heightPercent}%` }}
                   />
                   <span className="text-xs text-gray-500 mt-2">{day.label}</span>
                 </div>
@@ -719,7 +719,7 @@ function StatsDashboard() {
           <div className="flex items-end gap-1 h-32">
             {stats.hourlyStats.map((hour) => {
               const maxConvs = Math.max(...stats.hourlyStats.map((h) => h.conversations), 1)
-              const height = (hour.conversations / maxConvs) * 100
+              const heightPercent = hour.conversations > 0 ? Math.max((hour.conversations / maxConvs) * 100, 10) : 2
               const isActive = hour.conversations > 0
               return (
                 <div key={hour.hour} className="flex-1 flex flex-col items-center group">
@@ -729,7 +729,7 @@ function StatsDashboard() {
                         ? 'bg-gradient-to-t from-purple-400 to-purple-500' 
                         : 'bg-gray-100'
                     }`}
-                    style={{ height: `${Math.max(height, 3)}%`, minHeight: '4px' }}
+                    style={{ height: `${heightPercent}%` }}
                     title={`${hour.label} - ${hour.conversations} conversaciones`}
                   />
                   {hour.hour % 3 === 0 && (
