@@ -71,16 +71,32 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Not authorized' }, { status: 403 })
     }
 
-    const { userId, phone } = await request.json()
+    const { userId, phone, status, role } = await request.json()
 
     if (!userId) {
       return NextResponse.json({ error: 'User ID required' }, { status: 400 })
     }
 
-    // Update user phone
+    // Build update object with only provided fields
+    const updateData: Record<string, any> = {}
+    if (phone !== undefined) updateData.phone = phone
+    if (status !== undefined) updateData.status = status
+    if (role !== undefined) {
+      // Only supervisors can change roles
+      if (profile.role !== 'supervisor') {
+        return NextResponse.json({ error: 'Solo supervisores pueden cambiar roles' }, { status: 403 })
+      }
+      updateData.role = role
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json({ error: 'No fields to update' }, { status: 400 })
+    }
+
+    // Update user
     const { error: updateError } = await supabase
       .from('profiles')
-      .update({ phone })
+      .update(updateData)
       .eq('id', userId)
 
     if (updateError) {

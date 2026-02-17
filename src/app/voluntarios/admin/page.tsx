@@ -422,8 +422,6 @@ export default function AdminPage() {
   }, [router])
 
   const updateUserRole = async (userId: string, newRole: 'supervisor' | 'admin' | 'voluntario') => {
-    if (!supabase) return
-    
     // Only supervisors can change roles
     if (profile?.role !== 'supervisor') {
       setMessage({ type: 'error', text: 'Solo los supervisores pueden cambiar roles' })
@@ -432,16 +430,22 @@ export default function AdminPage() {
 
     setActionLoading(userId)
     
-    const { error } = await supabase
-      .from('profiles')
-      .update({ role: newRole })
-      .eq('id', userId)
+    try {
+      const response = await fetch('/api/admin/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, role: newRole })
+      })
 
-    if (error) {
-      setMessage({ type: 'error', text: 'Error al actualizar rol' })
-    } else {
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to update')
+      }
+
       setUsers(users.map(u => u.id === userId ? { ...u, role: newRole } : u))
       setMessage({ type: 'success', text: 'Rol actualizado correctamente' })
+    } catch (error: any) {
+      setMessage({ type: 'error', text: error.message || 'Error al actualizar rol' })
     }
     
     setActionLoading(null)
@@ -449,20 +453,24 @@ export default function AdminPage() {
   }
 
   const updateUserStatus = async (userId: string, newStatus: 'pending' | 'active' | 'inactive') => {
-    if (!supabase) return
-    
     setActionLoading(userId)
     
-    const { error } = await supabase
-      .from('profiles')
-      .update({ status: newStatus })
-      .eq('id', userId)
+    try {
+      const response = await fetch('/api/admin/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, status: newStatus })
+      })
 
-    if (error) {
-      setMessage({ type: 'error', text: 'Error al actualizar estado' })
-    } else {
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to update')
+      }
+
       setUsers(users.map(u => u.id === userId ? { ...u, status: newStatus } : u))
       setMessage({ type: 'success', text: newStatus === 'active' ? 'Usuario aprobado' : 'Estado actualizado' })
+    } catch (error: any) {
+      setMessage({ type: 'error', text: error.message || 'Error al actualizar estado' })
     }
     
     setActionLoading(null)
