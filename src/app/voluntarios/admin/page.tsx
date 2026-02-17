@@ -201,6 +201,126 @@ function ChannelManager() {
   );
 }
 
+// Reset Data Component (Production Launch)
+function ResetDataSection() {
+  const [showModal, setShowModal] = useState(false)
+  const [confirmation, setConfirmation] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [result, setResult] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+
+  const handleReset = async () => {
+    if (confirmation !== 'DELETE') {
+      setResult({ type: 'error', text: 'Escribe DELETE para confirmar' })
+      return
+    }
+
+    setLoading(true)
+    try {
+      const response = await fetch('/api/admin/reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirmation: 'DELETE' })
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Error al resetear')
+      }
+
+      setResult({ type: 'success', text: '✅ Datos eliminados correctamente. Listo para producción.' })
+      setConfirmation('')
+      setTimeout(() => {
+        setShowModal(false)
+        setResult(null)
+        window.location.reload()
+      }, 2000)
+    } catch (error: any) {
+      setResult({ type: 'error', text: error.message })
+    }
+    setLoading(false)
+  }
+
+  return (
+    <>
+      <div className="mb-8 p-4 bg-red-50 border border-red-200 rounded-xl">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="font-semibold text-red-800">Reset para Producción</h3>
+            <p className="text-sm text-red-600">Elimina todas las conversaciones y mensajes de prueba</p>
+          </div>
+          <button
+            onClick={() => setShowModal(true)}
+            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+          >
+            Resetear Datos
+          </button>
+        </div>
+      </div>
+
+      {/* Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-2xl">
+            <h3 className="text-lg font-bold text-red-600 mb-2">⚠️ Confirmar Reset</h3>
+            <p className="text-gray-600 mb-4">
+              Esta acción eliminará <strong>TODAS</strong> las conversaciones y mensajes de WhatsApp. 
+              Esta acción no se puede deshacer.
+            </p>
+            
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Escribe DELETE para confirmar:
+              </label>
+              <input
+                type="text"
+                value={confirmation}
+                onChange={(e) => setConfirmation(e.target.value)}
+                placeholder="DELETE"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                autoComplete="off"
+              />
+            </div>
+
+            {result && (
+              <div className={`mb-4 p-3 rounded-lg text-sm ${
+                result.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+              }`}>
+                {result.text}
+              </div>
+            )}
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowModal(false)
+                  setConfirmation('')
+                  setResult(null)
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                disabled={loading}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleReset}
+                disabled={loading || confirmation !== 'DELETE'}
+                className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
+                  confirmation === 'DELETE'
+                    ? 'bg-red-600 text-white hover:bg-red-700'
+                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                }`}
+              >
+                {loading ? 'Eliminando...' : 'Eliminar Todo'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
 // Stats Dashboard Component
 function StatsDashboard() {
   const [stats, setStats] = useState<any>(null)
@@ -700,6 +820,9 @@ export default function AdminPage() {
 
       {/* Stats Dashboard */}
       <StatsDashboard />
+
+      {/* Reset Data Section - Only for supervisors */}
+      {profile?.role === 'supervisor' && <ResetDataSection />}
 
       {/* Channel Manager */}
       <ChannelManager />
