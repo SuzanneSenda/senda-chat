@@ -429,6 +429,113 @@ interface StatsData {
   hourlyStats: HourlyStat[]
 }
 
+// Emergency Contacts Component
+function EmergencyContacts() {
+  const [conversations, setConversations] = useState<{
+    phone_number: string;
+    crisis_level: string | null;
+    created_at: string;
+  }[]>([])
+  const [loading, setLoading] = useState(true)
+  const [expanded, setExpanded] = useState(false)
+  const [copied, setCopied] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetch('/api/whatsapp/conversations')
+      .then(res => res.json())
+      .then(data => {
+        if (data.conversations) {
+          setConversations(data.conversations)
+        }
+        setLoading(false)
+      })
+      .catch(() => setLoading(false))
+  }, [])
+
+  const copyPhone = (phone: string) => {
+    navigator.clipboard.writeText(phone)
+    setCopied(phone)
+    setTimeout(() => setCopied(null), 2000)
+  }
+
+  const activeConvs = conversations.filter(c => c.phone_number)
+
+  if (loading) {
+    return (
+      <div className="mb-8 p-4 bg-red-50 border border-red-200 rounded-xl animate-pulse">
+        <div className="h-6 bg-red-200 rounded w-1/3"></div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="mb-8">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full p-4 bg-red-50 border border-red-200 rounded-xl hover:bg-red-100 transition-colors flex items-center justify-between"
+      >
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-red-500 rounded-lg">
+            <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+            </svg>
+          </div>
+          <div className="text-left">
+            <h3 className="font-semibold text-red-800">🚨 Emergencia - Teléfonos Activos</h3>
+            <p className="text-sm text-red-600">{activeConvs.length} conversaciones activas</p>
+          </div>
+        </div>
+        <svg className={`w-5 h-5 text-red-600 transition-transform ${expanded ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {expanded && (
+        <div className="mt-2 p-4 bg-white border border-red-200 rounded-xl">
+          {activeConvs.length === 0 ? (
+            <p className="text-gray-500 text-sm text-center py-4">No hay conversaciones activas</p>
+          ) : (
+            <div className="space-y-2">
+              {activeConvs.map((conv, idx) => (
+                <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div>
+                    <p className="font-mono text-gray-900">{conv.phone_number}</p>
+                    <p className="text-xs text-gray-500">
+                      Inicio: {new Date(conv.created_at).toLocaleString('es-MX')}
+                      {conv.crisis_level && (
+                        <span className={`ml-2 px-2 py-0.5 rounded text-xs ${
+                          conv.crisis_level === 'high' ? 'bg-red-100 text-red-700' :
+                          conv.crisis_level === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                          'bg-green-100 text-green-700'
+                        }`}>
+                          {conv.crisis_level}
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => copyPhone(conv.phone_number)}
+                    className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                      copied === conv.phone_number
+                        ? 'bg-green-500 text-white'
+                        : 'bg-red-500 text-white hover:bg-red-600'
+                    }`}
+                  >
+                    {copied === conv.phone_number ? '✓ Copiado' : 'Copiar'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <p className="text-xs text-gray-400 mt-3 text-center">
+            Usa estos teléfonos SOLO en caso de emergencia real
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // Stats Dashboard Component
 function StatsDashboard() {
   const [stats, setStats] = useState<StatsData | null>(null)
@@ -1061,6 +1168,9 @@ export default function AdminPage() {
 
       {/* Stats Dashboard */}
       <StatsDashboard />
+
+      {/* Emergency Contacts - For crisis situations */}
+      <EmergencyContacts />
 
       {/* Reset Data Section - Only for supervisors */}
       {profile?.role === 'supervisor' && <ResetDataSection />}
