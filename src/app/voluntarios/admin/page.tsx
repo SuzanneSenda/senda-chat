@@ -700,10 +700,10 @@ function StatsDashboard() {
       {stats.scoreDistribution && stats.surveyResponses > 0 && (
         <div className="bg-white p-5 rounded-xl border border-gray-200 mb-6">
           <p className="text-sm font-semibold text-gray-800 mb-4">Distribución de calificaciones</p>
-          <div className="flex items-end gap-3 h-32">
+          <div className="flex items-end gap-4 h-36">
             {stats.scoreDistribution.map((item) => {
               const maxCount = Math.max(...stats.scoreDistribution.map((s) => s.count), 1)
-              const heightPercent = item.count > 0 ? Math.max((item.count / maxCount) * 100, 15) : 2
+              const heightPx = item.count > 0 ? Math.max((item.count / maxCount) * 100, 16) : 4
               const colors = [
                 'from-red-400 to-red-500',
                 'from-orange-400 to-orange-500', 
@@ -711,18 +711,14 @@ function StatsDashboard() {
                 'from-lime-400 to-lime-500',
                 'from-green-400 to-green-500'
               ]
-              const emojis = ['😔', '😕', '😐', '🙂', '😊']
               return (
-                <div key={item.score} className="flex-1 flex flex-col items-center">
+                <div key={item.score} className="flex-1 flex flex-col items-center justify-end">
                   <span className="text-sm font-bold text-gray-700 mb-1">{item.count}</span>
                   <div 
                     className={`w-full bg-gradient-to-t ${colors[item.score - 1]} rounded-lg shadow-sm transition-all`}
-                    style={{ height: `${heightPercent}%` }}
+                    style={{ height: `${heightPx}px` }}
                   />
-                  <div className="mt-2 text-center">
-                    <span className="text-lg">{emojis[item.score - 1]}</span>
-                    <p className="text-xs font-medium text-gray-600">{item.score}</p>
-                  </div>
+                  <p className="text-xs font-medium text-gray-600 mt-2">{item.score}</p>
                 </div>
               )
             })}
