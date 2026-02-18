@@ -796,16 +796,16 @@ function StatsDashboard() {
       {stats.dailyStats && stats.dailyStats.length > 0 && (
         <div className="bg-white p-5 rounded-xl border border-gray-200 mb-6">
           <p className="text-sm font-semibold text-gray-800 mb-4">💬 Conversaciones por día (últimos 7 días)</p>
-          <div className="flex items-end gap-3 h-40">
+          <div className="flex items-end gap-3" style={{ height: '140px' }}>
             {stats.dailyStats.map((day) => {
               const maxConvs = Math.max(...stats.dailyStats.map((d) => d.conversations), 1)
-              const heightPercent = day.conversations > 0 ? Math.max((day.conversations / maxConvs) * 100, 15) : 2
+              const heightPx = day.conversations > 0 ? Math.max((day.conversations / maxConvs) * 100, 16) : 4
               return (
-                <div key={day.date} className="flex-1 flex flex-col items-center">
+                <div key={day.date} className="flex-1 flex flex-col items-center justify-end">
                   <span className="text-sm font-bold text-gray-700 mb-1">{day.conversations}</span>
                   <div 
                     className="w-full bg-gradient-to-t from-[var(--sage)] to-emerald-400 rounded-lg transition-all"
-                    style={{ height: `${heightPercent}%` }}
+                    style={{ height: `${heightPx}px` }}
                   />
                   <span className="text-xs text-gray-500 mt-2">{day.label}</span>
                 </div>
