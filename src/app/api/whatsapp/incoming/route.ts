@@ -134,7 +134,24 @@ export async function POST(request: NextRequest) {
     const phoneNumber = from?.replace('whatsapp:', '') || '';
     const trimmedBody = body?.trim() || '';
     
-    console.log('📱 Incoming WhatsApp:', { phoneNumber, profileName, body: trimmedBody.substring(0, 50) });
+    console.log('📱 Incoming WhatsApp:', { phoneNumber, profileName, body: trimmedBody.substring(0, 50), messageSid });
+
+    // DEDUPLICATION: Check if this message was already processed (Twilio retries)
+    if (messageSid) {
+      const { data: existingMsg } = await supabaseAdmin
+        .from('whatsapp_messages')
+        .select('id')
+        .eq('twilio_sid', messageSid)
+        .maybeSingle();
+      
+      if (existingMsg) {
+        console.log('⚠️ Duplicate message detected, skipping:', messageSid);
+        return new NextResponse(
+          '<?xml version="1.0" encoding="UTF-8"?><Response></Response>',
+          { status: 200, headers: { 'Content-Type': 'text/xml' } }
+        );
+      }
+    }
 
     // Check for existing conversation
     const { data: existingConv, error: selectError } = await supabaseAdmin
