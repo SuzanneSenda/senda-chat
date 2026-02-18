@@ -819,28 +819,30 @@ function StatsDashboard() {
       {stats.hourlyStats && stats.hourlyStats.some((h) => h.conversations > 0) ? (
         <div className="bg-white p-5 rounded-xl border border-gray-200">
           <p className="text-sm font-semibold text-gray-800 mb-4">🕐 Conversaciones por horario</p>
-          <div className="flex items-end gap-1" style={{ height: '120px' }}>
+          <div className="flex items-end gap-1" style={{ height: '100px' }}>
             {stats.hourlyStats.map((hour) => {
               const maxConvs = Math.max(...stats.hourlyStats.map((h) => h.conversations), 1)
-              const heightPx = hour.conversations > 0 ? Math.max((hour.conversations / maxConvs) * 100, 12) : 4
+              const heightPx = hour.conversations > 0 ? Math.max((hour.conversations / maxConvs) * 80, 12) : 4
               const isActive = hour.conversations > 0
               return (
-                <div key={hour.hour} className="flex-1 flex flex-col items-end justify-end group">
+                <div key={hour.hour} className="flex-1 flex items-end justify-center">
                   <div 
                     className={`w-full rounded-t transition-all ${
                       isActive 
-                        ? 'bg-gradient-to-t from-purple-400 to-purple-500' 
+                        ? 'bg-gradient-to-t from-blue-500 to-blue-400' 
                         : 'bg-gray-100'
                     }`}
                     style={{ height: `${heightPx}px` }}
                     title={`${hour.label} - ${hour.conversations} conversaciones`}
                   />
-                  {hour.hour % 3 === 0 && (
-                    <span className="text-[10px] text-gray-400 mt-1 w-full text-center">{hour.hour}h</span>
-                  )}
                 </div>
               )
             })}
+          </div>
+          <div className="flex justify-between text-[10px] text-gray-400 mt-1">
+            {[0, 3, 6, 9, 12, 15, 18, 21].map(h => (
+              <span key={h}>{h}h</span>
+            ))}
           </div>
           <div className="flex justify-between mt-2 text-[10px] text-gray-400">
             <span>🌙 Madrugada</span>
