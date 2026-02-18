@@ -98,83 +98,68 @@ export async function GET(request: NextRequest) {
       count: surveyScores.filter(s => s === score).length
     }));
 
-    // Get conversations per day (last 7 days) - count unique phone numbers
-    // Use Mexico City timezone for date calculations
-    const getMexicoDate = (date: Date) => {
-      return new Date(date.toLocaleString('en-US', { timeZone: 'America/Mexico_City' }));
-    };
-    
-    const formatMexicoDate = (date: Date) => {
-      const mx = getMexicoDate(date);
-      return `${mx.getFullYear()}-${String(mx.getMonth() + 1).padStart(2, '0')}-${String(mx.getDate()).padStart(2, '0')}`;
-    };
-
+    // Get conversations per day (last 7 days) - from conversation_stats
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0];
 
-    const { data: recentMessages } = await supabase
-      .from('whatsapp_messages')
-      .select('created_at, phone_number')
-      .eq('direction', 'inbound')
-      .gte('created_at', sevenDaysAgo.toISOString()) as { data: { created_at: string; phone_number: string }[] | null };
+    const { data: dailyData } = await supabase
+      .from('conversation_stats')
+      .select('conversation_date')
+      .gte('conversation_date', sevenDaysAgoStr) as { data: { conversation_date: string }[] | null };
 
-    // Group unique phones by day (Mexico timezone)
-    const convsByDay: { [key: string]: Set<string> } = {};
+    // Initialize last 7 days
+    const convsByDay: { [key: string]: number } = {};
     for (let i = 6; i >= 0; i--) {
       const date = new Date();
       date.setDate(date.getDate() - i);
-      const key = formatMexicoDate(date);
-      convsByDay[key] = new Set();
+      const key = date.toISOString().split('T')[0];
+      convsByDay[key] = 0;
     }
 
-    if (recentMessages) {
-      for (const msg of recentMessages) {
-        // Convert message timestamp to Mexico timezone date
-        const msgDate = new Date(msg.created_at);
-        const day = formatMexicoDate(msgDate);
-        if (convsByDay[day]) {
-          convsByDay[day].add(msg.phone_number);
+    if (dailyData) {
+      for (const row of dailyData) {
+        if (row.conversation_date && convsByDay[row.conversation_date] !== undefined) {
+          convsByDay[row.conversation_date]++;
         }
       }
     }
 
-    const dailyStats = Object.entries(convsByDay).map(([date, phones]) => ({
+    const dailyStats = Object.entries(convsByDay).map(([date, count]) => ({
       date,
       label: new Date(date + 'T12:00:00').toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', timeZone: 'America/Mexico_City' }),
-      conversations: phones.size
+      conversations: count
     }));
 
-    // Get conversations by hour of day
-    let allInboundMsgs = supabase
-      .from('whatsapp_messages')
-      .select('created_at, phone_number')
-      .eq('direction', 'inbound');
+    // Get conversations by hour of day - from conversation_stats
+    let hourlyQuery = supabase
+      .from('conversation_stats')
+      .select('conversation_hour');
     
     if (dateFilter) {
-      allInboundMsgs = allInboundMsgs.gte('created_at', dateFilter);
+      hourlyQuery = hourlyQuery.gte('closed_at', dateFilter);
     }
     
-    const { data: hourlyMsgs } = await allInboundMsgs as { data: { created_at: string; phone_number: string }[] | null };
+    const { data: hourlyData } = await hourlyQuery as { data: { conversation_hour: number }[] | null };
     
-    // Count unique conversations per hour
-    const hourlyConvs: { [hour: number]: Set<string> } = {};
+    // Count conversations per hour
+    const hourlyConvs: { [hour: number]: number } = {};
     for (let h = 0; h < 24; h++) {
-      hourlyConvs[h] = new Set();
+      hourlyConvs[h] = 0;
     }
     
-    if (hourlyMsgs) {
-      for (const msg of hourlyMsgs) {
-        // Convert to Mexico timezone hour
-        const msgDate = new Date(msg.created_at);
-        const mexicoHour = parseInt(msgDate.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'America/Mexico_City' }));
-        hourlyConvs[mexicoHour].add(msg.phone_number);
+    if (hourlyData) {
+      for (const row of hourlyData) {
+        if (row.conversation_hour !== null && row.conversation_hour >= 0 && row.conversation_hour < 24) {
+          hourlyConvs[row.conversation_hour]++;
+        }
       }
     }
     
-    const hourlyStats = Object.entries(hourlyConvs).map(([hour, phones]) => ({
+    const hourlyStats = Object.entries(hourlyConvs).map(([hour, count]) => ({
       hour: parseInt(hour),
       label: `${hour}:00`,
-      conversations: phones.size
+      conversations: count
     }));
 
     // Get oldest message date for "desde" display

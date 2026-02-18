@@ -114,6 +114,10 @@ export async function POST(request: NextRequest) {
         volunteerName = volunteer?.full_name || null;
       }
 
+      // Get conversation start time for day/hour tracking
+      const convDate = createdAt.toISOString().split('T')[0]; // YYYY-MM-DD
+      const convHour = createdAt.getHours(); // 0-23
+
       // Save stats (rating will be updated if user responds to survey)
       const { error: statsError } = await supabaseAdmin
         .from('conversation_stats')
@@ -124,6 +128,8 @@ export async function POST(request: NextRequest) {
           rating: null, // Will be updated when user responds to survey
           duration_minutes: durationMinutes,
           closed_at: closedAt,
+          conversation_date: convDate,
+          conversation_hour: convHour,
         });
 
       if (statsError) {
