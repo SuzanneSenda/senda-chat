@@ -24,20 +24,16 @@ export async function GET(request: NextRequest) {
       dateFilter = monthAgo.toISOString();
     }
 
-    // Get total conversations (unique phone numbers)
-    let conversationsQuery = supabase
-      .from('whatsapp_messages')
-      .select('phone_number')
-      .eq('direction', 'inbound');
+    // Get total conversations from conversation_stats (closed conversations)
+    let totalConversationsQuery = supabase
+      .from('conversation_stats')
+      .select('id', { count: 'exact' });
     
     if (dateFilter) {
-      conversationsQuery = conversationsQuery.gte('created_at', dateFilter);
+      totalConversationsQuery = totalConversationsQuery.gte('closed_at', dateFilter);
     }
     
-    const { data: conversations } = await conversationsQuery as { data: { phone_number: string }[] | null };
-
-    const uniqueConversations = new Set(conversations?.map(c => c.phone_number) || []);
-    const totalConversations = uniqueConversations.size;
+    const { count: totalConversations } = await totalConversationsQuery;
 
     // Get closed conversations (conversations that received the survey)
     let closedQuery = supabase
