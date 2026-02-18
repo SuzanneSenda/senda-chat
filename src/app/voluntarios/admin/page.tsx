@@ -819,24 +819,24 @@ function StatsDashboard() {
       {stats.hourlyStats && stats.hourlyStats.some((h) => h.conversations > 0) ? (
         <div className="bg-white p-5 rounded-xl border border-gray-200">
           <p className="text-sm font-semibold text-gray-800 mb-4">🕐 Conversaciones por horario</p>
-          <div className="flex items-end gap-1 h-32">
+          <div className="flex items-end gap-1" style={{ height: '120px' }}>
             {stats.hourlyStats.map((hour) => {
               const maxConvs = Math.max(...stats.hourlyStats.map((h) => h.conversations), 1)
-              const heightPercent = hour.conversations > 0 ? Math.max((hour.conversations / maxConvs) * 100, 10) : 2
+              const heightPx = hour.conversations > 0 ? Math.max((hour.conversations / maxConvs) * 100, 12) : 4
               const isActive = hour.conversations > 0
               return (
-                <div key={hour.hour} className="flex-1 flex flex-col items-center group">
+                <div key={hour.hour} className="flex-1 flex flex-col items-end justify-end group">
                   <div 
                     className={`w-full rounded-t transition-all ${
                       isActive 
                         ? 'bg-gradient-to-t from-purple-400 to-purple-500' 
                         : 'bg-gray-100'
                     }`}
-                    style={{ height: `${heightPercent}%` }}
+                    style={{ height: `${heightPx}px` }}
                     title={`${hour.label} - ${hour.conversations} conversaciones`}
                   />
                   {hour.hour % 3 === 0 && (
-                    <span className="text-[10px] text-gray-400 mt-1">{hour.hour}h</span>
+                    <span className="text-[10px] text-gray-400 mt-1 w-full text-center">{hour.hour}h</span>
                   )}
                 </div>
               )
