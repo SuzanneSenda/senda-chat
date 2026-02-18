@@ -804,8 +804,8 @@ function StatsDashboard() {
                 <div key={day.date} className="flex-1 flex flex-col items-center justify-end">
                   <span className="text-sm font-bold text-gray-700 mb-1">{day.conversations}</span>
                   <div 
-                    className="w-full bg-gradient-to-t from-[var(--sage)] to-emerald-400 rounded-lg transition-all"
-                    style={{ height: `${heightPx}px` }}
+                    className="w-full bg-gradient-to-t from-green-500 to-green-400 rounded-lg transition-all"
+                    style={{ height: `${heightPx}px`, minHeight: '4px' }}
                   />
                   <span className="text-xs text-gray-500 mt-2">{day.label}</span>
                 </div>
