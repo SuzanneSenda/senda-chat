@@ -114,9 +114,10 @@ export async function POST(request: NextRequest) {
         volunteerName = volunteer?.full_name || null;
       }
 
-      // Get conversation start time for day/hour tracking
-      const convDate = createdAt.toISOString().split('T')[0]; // YYYY-MM-DD
-      const convHour = createdAt.getHours(); // 0-23
+      // Get conversation start time for day/hour tracking (Mexico City timezone)
+      const mexicoTime = new Date(createdAt.toLocaleString('en-US', { timeZone: 'America/Mexico_City' }));
+      const convDate = mexicoTime.toISOString().split('T')[0]; // YYYY-MM-DD
+      const convHour = mexicoTime.getHours(); // 0-23
 
       // Save stats (rating will be updated if user responds to survey)
       const { error: statsError } = await supabaseAdmin
