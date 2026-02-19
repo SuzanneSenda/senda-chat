@@ -20,10 +20,10 @@ export async function POST(request: NextRequest) {
     // Get Twilio credentials
     const accountSid = process.env.TWILIO_ACCOUNT_SID;
     const authToken = process.env.TWILIO_AUTH_TOKEN;
-    const twilioSms = process.env.TWILIO_SMS_NUMBER;
+    const messagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID;
 
-    if (!accountSid || !authToken || !twilioSms) {
-      console.error('Twilio SMS credentials not configured');
+    if (!accountSid || !authToken || !messagingServiceSid) {
+      console.error('Twilio SMS credentials not configured (need TWILIO_MESSAGING_SERVICE_SID)');
       return NextResponse.json({ error: 'SMS not configured' }, { status: 500 });
     }
 
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
         },
         body: new URLSearchParams({
           To: toNumber,
-          From: twilioSms,
+          MessagingServiceSid: messagingServiceSid,
           Body: message,
         }),
       }

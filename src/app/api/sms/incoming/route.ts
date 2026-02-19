@@ -10,7 +10,7 @@ const supabaseAdmin = createClient(
 // Twilio credentials
 const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID;
 const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN;
-const TWILIO_SMS_NUMBER = process.env.TWILIO_SMS_NUMBER; // SMS number (different from WhatsApp)
+const TWILIO_MESSAGING_SERVICE_SID = process.env.TWILIO_MESSAGING_SERVICE_SID; // Messaging Service for Sticky Sender
 
 // Crisis level messages
 const CRISIS_LEVELS = [
@@ -55,10 +55,10 @@ async function isSmsEnabled(): Promise<boolean> {
   }
 }
 
-// Send SMS via Twilio
+// Send SMS via Twilio using Messaging Service (for Sticky Sender)
 async function sendSms(to: string, message: string): Promise<boolean> {
-  if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_SMS_NUMBER) {
-    console.error('Twilio SMS credentials not configured');
+  if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_MESSAGING_SERVICE_SID) {
+    console.error('Twilio SMS credentials not configured (need TWILIO_MESSAGING_SERVICE_SID)');
     return false;
   }
 
@@ -73,7 +73,7 @@ async function sendSms(to: string, message: string): Promise<boolean> {
         },
         body: new URLSearchParams({
           To: to,
-          From: TWILIO_SMS_NUMBER,
+          MessagingServiceSid: TWILIO_MESSAGING_SERVICE_SID,
           Body: message,
         }),
       }
